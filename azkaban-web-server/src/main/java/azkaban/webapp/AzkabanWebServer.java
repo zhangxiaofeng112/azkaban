@@ -131,6 +131,7 @@ import static java.util.Objects.*;
  * for sessionizing. jetty.keystore - Jetty keystore . jetty.keypassword - Jetty
  * keystore password jetty.truststore - Jetty truststore jetty.trustpassword -
  * Jetty truststore password
+ * zxf add logs
  */
 public class AzkabanWebServer extends AzkabanServer {
   private static final String AZKABAN_ACCESS_LOGGER_NAME =
@@ -321,15 +322,23 @@ public class AzkabanWebServer extends AzkabanServer {
     // load all plugin alerters
     String pluginDir = props.getString("alerter.plugin.dir", "plugins/alerter");
     allAlerters.putAll(loadPluginAlerters(pluginDir));
+    //added by zxf
+    logger.info("allAlerters.size >>> " + allAlerters.size());
+    logger.info("allAlerters >>> " + allAlerters.toString());
+    //added end
     return allAlerters;
   }
 
   private Map<String, Alerter> loadPluginAlerters(String pluginPath) {
     File alerterPluginPath = new File(pluginPath);
     if (!alerterPluginPath.exists()) {
+      //added by zxf
+      logger.info("this is no alerter plugin >>> " + pluginPath);
       return Collections.<String, Alerter> emptyMap();
     }
 
+    //added by zxf
+    logger.info("alerter pluginPath >>> " + pluginPath);
     Map<String, Alerter> installedAlerterPlugins =
         new HashMap<String, Alerter>();
     ClassLoader parentLoader = getClass().getClassLoader();

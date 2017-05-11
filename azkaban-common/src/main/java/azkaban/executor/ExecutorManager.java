@@ -1445,6 +1445,7 @@ public class ExecutorManager extends EventHandler implements
             logger.error(e);
           }
         }
+        //flow options中配置的alert.type属性
         if (options.getFlowParameters().containsKey("alert.type")) {
           String alertType = options.getFlowParameters().get("alert.type");
           Alerter alerter = alerters.get(alertType);
@@ -1460,6 +1461,21 @@ public class ExecutorManager extends EventHandler implements
             logger.error("Alerter type " + alertType + " doesn't exist. Failed to alert.");
           }
         }
+        
+        //added by zxf
+        //alerter plugin global conf
+        Alerter smsAlerter = alerters.get("sms");
+        if (smsAlerter != null) {
+        	logger.info("alert.type=sms founded");
+        	try {
+        		smsAlerter.alertOnError(flow);
+              } catch (Exception e) {
+                logger.error("Failed to alert by " + smsAlerter, e);
+              }
+		} else {
+			logger.info("alert.type=sms not found, exit");
+		}
+        
       } else {
         if (options.getSuccessEmails() != null && !options.getSuccessEmails().isEmpty()) {
           try {
@@ -1484,6 +1500,21 @@ public class ExecutorManager extends EventHandler implements
             logger.error("Alerter type " + alertType + " doesn't exist. Failed to alert.");
           }
         }
+        
+        //added by zxf
+        //alerter plugin global conf
+          Alerter smsAlerter = alerters.get("sms");
+          if (smsAlerter != null) {
+          	logger.info("alert.type=sms founded");
+          	try {
+          		smsAlerter.alertOnSuccess(flow);
+                } catch (Exception e) {
+                  logger.error("Failed to alert by " + smsAlerter, e);
+                }
+  		} else {
+  			logger.info("alert.type=sms not found, exit");
+  		}
+        
       }
     }
 
@@ -1600,6 +1631,20 @@ public class ExecutorManager extends EventHandler implements
               + " doesn't exist. Failed to alert.");
         }
       }
+      
+      //added by zxf
+      //alerter plugin global conf
+      Alerter smsAlerter = alerters.get("sms");
+      if (smsAlerter != null) {
+      	logger.info("alert.type=sms founded");
+      	try {
+      		smsAlerter.alertOnFirstError(flow);
+            } catch (Exception e) {
+              logger.error("Failed to alert by " + smsAlerter, e);
+            }
+		} else {
+			logger.info("alert.type=sms not found, exit");
+		}
     }
 
     return flow;
