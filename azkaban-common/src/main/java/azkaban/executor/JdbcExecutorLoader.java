@@ -456,12 +456,6 @@ private synchronized void uploadExecutableFlow(Connection connection,
 @Override
   public synchronized boolean updateExecutableReference(int execId, long updateTime) throws ExecutorManagerException {
 	logger.info(">>> updateExecutableReference, execId:"+execId+",updateTime:"+updateTime);
-	//TODO zxf debug
-	try {
-		Thread.currentThread().sleep(10000);
-	} catch (InterruptedException e1) {
-		e1.printStackTrace();
-	}
     final String DELETE = "UPDATE active_executing_flows set update_time=? WHERE exec_id=?";
     QueryRunner runner = createQueryRunner();
     int updateNum = 0;
@@ -490,11 +484,6 @@ private synchronized void uploadExecutableFlow(Connection connection,
 		throw new ExecutorManagerException("Error deleting active flow reference " + execId);
 	}
     //end retry
-    try {
-		Thread.currentThread().sleep(10000);
-	} catch (InterruptedException e1) {
-		e1.printStackTrace();
-	}
     // Should be 1.
     logger.info(">>> updateExecutableReference, execId:"+execId+",updateTime:"+updateTime+",updateNum:"+updateNum);
 //    return updateNum > 0;
