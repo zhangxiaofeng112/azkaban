@@ -128,9 +128,6 @@ public class FlowRunner extends EventHandler implements Runnable {
   // The following is state that will trigger a retry of all failed jobs
   private boolean retryFailedJobs = false;
   
-  //retry times
-  private int retry = 3;
-
   /**
    * Constructor. This will create its own ExecutorService for thread pools
    *
@@ -215,7 +212,7 @@ public class FlowRunner extends EventHandler implements Runnable {
       }
       setupFlowExecution();
       flow.setStartTime(System.currentTimeMillis());
-
+      
       updateFlowReference();
 
       logger.info("Updating initial flow directory.");
@@ -227,10 +224,7 @@ public class FlowRunner extends EventHandler implements Runnable {
       runFlow();
     } catch (Throwable t) {
       if (logger != null) {
-        logger
-            .error(
-                "An error has occurred during the running of the flow. Quiting.",
-                t);
+        logger.error("An error has occurred during the running of the flow. Quiting.", t);
       }
       flow.setStatus(Status.FAILED);
     } finally {
