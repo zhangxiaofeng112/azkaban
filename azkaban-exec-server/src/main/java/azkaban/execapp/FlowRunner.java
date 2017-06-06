@@ -299,23 +299,23 @@ public class FlowRunner extends EventHandler implements Runnable {
    */
 @SuppressWarnings("static-access")
 private synchronized void updateFlowReference() throws ExecutorManagerException {
-    logger.info("Update active reference sync");
+    logger.info(">>> Update active reference sync, execId: " + execId);
     if (executorLoader.updateExecutableReference(execId, System.currentTimeMillis())) {
-    	logger.info("The executor executed success");
+    	logger.info(">>> The executor executed success");
 		return;
 	}
 	if (retry > 0) {
-		logger.info("The executor reference doesn't exist, retry: " + retry);
+		logger.info(">>> The executor reference doesn't exist, retry: " + retry);
 		retry--;
 		try {
-			Thread.currentThread().sleep(1000);
-			logger.info("The executor sleep 1s");
+			Thread.currentThread().sleep(5000);
+			logger.info(">>> The executor sleep 5s");
 		} catch (InterruptedException e) {
-			logger.error("The executor sleep throw exception", e);
+			logger.error(">>> The executor sleep throw exception", e);
 		}
 		updateFlowReference();
 	} else {
-		logger.error("The executor reference doesn't exist. May have been killed prematurely.");
+		logger.error(">>> The executor reference doesn't exist. May have been killed prematurely.");
 		throw new ExecutorManagerException(
 		          "The executor reference doesn't exist. May have been killed prematurely.");
 	}
