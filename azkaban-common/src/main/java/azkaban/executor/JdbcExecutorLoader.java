@@ -16,7 +16,6 @@
 
 package azkaban.executor;
 
-import com.google.inject.Inject;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -40,6 +39,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
+
+import com.google.inject.Inject;
 
 import azkaban.database.AbstractJdbcLoader;
 import azkaban.executor.ExecutorLogEvent.EventType;
@@ -87,16 +88,6 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
     }
   }
 
-  /**
-   * 
-   * @param connection
-   * @param flow
-   * @param encType
-   * @throws ExecutorManagerException
-   * @throws IOException
-   * @author zxf 
-   */
-  @SuppressWarnings("static-access")
 private synchronized void uploadExecutableFlow(Connection connection,
       ExecutableFlow flow, EncodingType encType)
       throws ExecutorManagerException, IOException {
@@ -114,36 +105,18 @@ private synchronized void uploadExecutableFlow(Connection connection,
           flow.getFlowId(), flow.getVersion(), Status.PREPARING.getNumVal(),
           submitTime, flow.getSubmitUser(), submitTime);
       connection.commit();
-      //thread sleep
-      Thread.currentThread().sleep(1000);
-      logger.info(">>> threadId:"+Thread.currentThread().getId()+",sleep 1s");
       id = runner.query(connection, LastInsertID.LAST_INSERT_ID,
               new LastInsertID());
-      logger.info(">>> uploadExecutableFlow, execid:"+id);
-//      if (id == -1L) {
-      if (id <= 0L) {
-    	logger.info(">>> uploadExecutableFlow, execid is illegel:"+id);
-    	//start retry
-    	if (retryTimes > 0) {
-    		logger.info(">>> uploadExecutableFlow, last inserted execid is illegel:"+id+", retryTimes:"+retryTimes);
-    		retryTimes--;
-    		Thread.currentThread().sleep(1000);
-    		logger.info(">>> threadId:"+Thread.currentThread().getId()+",retryTimes sleep 1s");
-    		uploadExecutableFlow(connection, flow, encType);
-		} else {
-			logger.error(">>> Execution id is not properly created, execid is illegel:"+id);
-			throw new ExecutorManagerException("Execution id is not properly created.");
-		}
-      }
+      if (id == -1L) {
+		throw new ExecutorManagerException("Execution id is not properly created.");
+	  }
       logger.info("Flow given " + flow.getFlowId() + " given id " + id);
       flow.setExecutionId((int) id);
 
       updateExecutableFlow(connection, flow, encType);
     } catch (SQLException e) {
     	throw new ExecutorManagerException("Error creating execution.", e);
-    } catch (InterruptedException ex) {
-    	throw new ExecutorManagerException("Error creating execution.", ex);
-	}
+    } 
   }
 
   @Override
@@ -480,11 +453,9 @@ private synchronized void uploadExecutableFlow(Connection connection,
   }
 
   @Override
-  public boolean updateExecutableReference(int execId, long updateTime)
-      throws ExecutorManagerException {
-    final String DELETE =
-        "UPDATE active_executing_flows set update_time=? WHERE exec_id=?";
-
+  public boolean updateExecutableReference(int execId, long updateTime) throws ExecutorManagerException {
+	logger.info(">>> updateExecutableReference, execId:"+execId+",updateTime:"+updateTime);
+    final String DELETE = "UPDATE active_executing_flows set update_time=? WHERE exec_id=?";
     QueryRunner runner = createQueryRunner();
     int updateNum = 0;
     try {
@@ -493,8 +464,8 @@ private synchronized void uploadExecutableFlow(Connection connection,
       throw new ExecutorManagerException(
           "Error deleting active flow reference " + execId, e);
     }
-
     // Should be 1.
+    logger.info(">>> updateExecutableReference, execId:"+execId+",updateTime:"+updateTime+",updateNum:"+updateNum);
     return updateNum > 0;
   }
 
