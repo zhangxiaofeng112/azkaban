@@ -57,6 +57,9 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
       .getLogger(JdbcExecutorLoader.class);
 
   private EncodingType defaultEncodingType = EncodingType.GZIP;
+  
+  //retry times
+  private int retryTimes = 3;
 
   @Inject
   public JdbcExecutorLoader(Props props) {
@@ -84,7 +87,17 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
     }
   }
 
-  private synchronized void uploadExecutableFlow(Connection connection,
+  /**
+   * 
+   * @param connection
+   * @param flow
+   * @param encType
+   * @throws ExecutorManagerException
+   * @throws IOException
+   * @author zxf 
+   */
+  @SuppressWarnings("static-access")
+private synchronized void uploadExecutableFlow(Connection connection,
       ExecutableFlow flow, EncodingType encType)
       throws ExecutorManagerException, IOException {
     final String INSERT_EXECUTABLE_FLOW =
@@ -101,21 +114,36 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
           flow.getFlowId(), flow.getVersion(), Status.PREPARING.getNumVal(),
           submitTime, flow.getSubmitUser(), submitTime);
       connection.commit();
-      id =
-          runner.query(connection, LastInsertID.LAST_INSERT_ID,
+      //thread sleep
+      Thread.currentThread().sleep(1000);
+      logger.info(">>> threadId:"+Thread.currentThread().getId()+",sleep 1s");
+      id = runner.query(connection, LastInsertID.LAST_INSERT_ID,
               new LastInsertID());
-
-      if (id == -1L) {
-        throw new ExecutorManagerException(
-            "Execution id is not properly created.");
+      logger.info(">>> uploadExecutableFlow, execid:"+id);
+//      if (id == -1L) {
+      if (id <= 0L) {
+    	logger.info(">>> uploadExecutableFlow, execid is illegel:"+id);
+    	//start retry
+    	if (retryTimes > 0) {
+    		logger.info(">>> uploadExecutableFlow, last inserted execid is illegel:"+id+", retryTimes:"+retryTimes);
+    		retryTimes--;
+    		Thread.currentThread().sleep(1000);
+    		logger.info(">>> threadId:"+Thread.currentThread().getId()+",retryTimes sleep 1s");
+    		uploadExecutableFlow(connection, flow, encType);
+		} else {
+			logger.error(">>> Execution id is not properly created, execid is illegel:"+id);
+			throw new ExecutorManagerException("Execution id is not properly created.");
+		}
       }
       logger.info("Flow given " + flow.getFlowId() + " given id " + id);
       flow.setExecutionId((int) id);
 
       updateExecutableFlow(connection, flow, encType);
     } catch (SQLException e) {
-      throw new ExecutorManagerException("Error creating execution.", e);
-    }
+    	throw new ExecutorManagerException("Error creating execution.", e);
+    } catch (InterruptedException ex) {
+    	throw new ExecutorManagerException("Error creating execution.", ex);
+	}
   }
 
   @Override
