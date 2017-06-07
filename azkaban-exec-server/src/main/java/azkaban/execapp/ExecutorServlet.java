@@ -282,9 +282,17 @@ public class ExecutorServlet extends HttpServlet implements ConnectorParams {
     respMap.put(RESPONSE_UPDATED_FLOWS, updateList);
   }
 
+  /**
+   * 提交执行入口
+   * @param req
+   * @param respMap
+   * @param execId
+   * @throws ServletException
+   */
   private void handleAjaxExecute(HttpServletRequest req,
       Map<String, Object> respMap, int execId) throws ServletException {
     try {
+      logger.info(">>> handleAjaxExecute, execId: " + execId);
       flowRunnerManager.submitFlow(execId);
     } catch (ExecutorManagerException e) {
       e.printStackTrace();

@@ -61,6 +61,7 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
   
   //retry times
   private int retryTimes = 3;
+  private int retryInsertTimes = 3;
 
   @Inject
   public JdbcExecutorLoader(Props props) {
@@ -170,8 +171,7 @@ private synchronized void uploadExecutableFlow(Connection connection,
 
     try {
       List<ExecutableFlow> properties =
-          runner.query(FetchExecutableFlows.FETCH_EXECUTABLE_FLOW, flowHandler,
-              id);
+          runner.query(FetchExecutableFlows.FETCH_EXECUTABLE_FLOW, flowHandler, id);
       if (properties.isEmpty()) {
         return null;
       } else {
@@ -422,20 +422,40 @@ private synchronized void uploadExecutableFlow(Connection connection,
     }
   }
 
-  @Override
-  public void addActiveExecutableReference(ExecutionReference reference)
-      throws ExecutorManagerException {
-    final String INSERT =
-        "INSERT INTO active_executing_flows "
-            + "(exec_id, update_time) values (?,?)";
+  //TODO zxf
+  @SuppressWarnings("static-access")
+@Override
+  public synchronized void addActiveExecutableReference(ExecutionReference reference) throws ExecutorManagerException {
+    final String INSERT = "INSERT INTO active_executing_flows(exec_id, update_time) values (?,?)";
     QueryRunner runner = createQueryRunner();
-
+    Connection connection = getConnection();
+    long id = 0L;
     try {
       runner.update(INSERT, reference.getExecId(), reference.getUpdateTime());
+      //check result
+      id = runner.query(connection, LastInsertID.LAST_INSERT_ID, new LastInsertID());
     } catch (SQLException e) {
-      throw new ExecutorManagerException(
-          "Error updating active flow reference " + reference.getExecId(), e);
+      logger.error("Error updating active flow reference " + reference.getExecId(), e);
+//      throw new ExecutorManagerException("Error updating active flow reference " + reference.getExecId(), e);
     }
+    logger.info(">>> addActiveExecutableReference, id: " + id);
+    if (id > 0L) {
+    	logger.info(">>> addActiveExecutableReference, success");
+		return;
+	}
+    if (retryInsertTimes > 0) {
+		logger.info(">>> addActiveExecutableReference, retryInsertTimes:" + retryInsertTimes);
+		retryInsertTimes--;
+		try {
+			Thread.currentThread().sleep(2000);
+		} catch (InterruptedException e) {
+			logger.error(e);
+		}
+		addActiveExecutableReference(reference);
+	} else {
+		logger.info(">>> addActiveExecutableReference, has retry Insert Times:" + retryInsertTimes);
+		throw new ExecutorManagerException("Error updating active flow reference " + reference.getExecId());
+	}
   }
 
   @Override

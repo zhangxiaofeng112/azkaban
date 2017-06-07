@@ -911,14 +911,21 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
     ajaxExecuteFlow(req, resp, ret, user);
   }
 
+  /**
+   * 提交execute
+   * @param req
+   * @param resp
+   * @param ret
+   * @param user
+   * @throws ServletException
+   */
   private void ajaxExecuteFlow(HttpServletRequest req,
       HttpServletResponse resp, HashMap<String, Object> ret, User user)
       throws ServletException {
     String projectName = getParam(req, "project");
     String flowId = getParam(req, "flow");
-
-    Project project =
-        getProjectAjaxByPermission(ret, projectName, user, Type.EXECUTE);
+    LOGGER.info(">>> ajaxExecuteFlow, project: " + projectName + ", flowId: " + flowId);
+    Project project = getProjectAjaxByPermission(ret, projectName, user, Type.EXECUTE);
     if (project == null) {
       ret.put("error", "Project '" + projectName + "' doesn't exist.");
       return;
@@ -927,8 +934,7 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
     ret.put("flow", flowId);
     Flow flow = project.getFlow(flowId);
     if (flow == null) {
-      ret.put("error", "Flow '" + flowId + "' cannot be found in project "
-          + project);
+      ret.put("error", "Flow '" + flowId + "' cannot be found in project " + project);
       return;
     }
 
@@ -948,15 +954,12 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
 
     try {
       HttpRequestUtils.filterAdminOnlyFlowParams(userManager, options, user);
-      String message =
-          executorManager.submitExecutableFlow(exflow, user.getUserId());
+      String message = executorManager.submitExecutableFlow(exflow, user.getUserId());
       ret.put("message", message);
     } catch (Exception e) {
       e.printStackTrace();
-      ret.put("error",
-          "Error submitting flow " + exflow.getFlowId() + ". " + e.getMessage());
+      ret.put("error", "Error submitting flow " + exflow.getFlowId() + ". " + e.getMessage());
     }
-
     ret.put("execid", exflow.getExecutionId());
   }
 

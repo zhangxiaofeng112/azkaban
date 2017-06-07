@@ -468,24 +468,29 @@ public class FlowRunnerManager implements EventListener,
     }
   }
 
+  /**
+   * Load file and submit
+   * @param execId
+   * @throws ExecutorManagerException
+   */
   public void submitFlow(int execId) throws ExecutorManagerException {
     // Load file and submit
     if (runningFlows.containsKey(execId)) {
-      throw new ExecutorManagerException("Execution " + execId
-          + " is already running.");
+      throw new ExecutorManagerException("Execution " + execId + " is already running.");
     }
 
     ExecutableFlow flow = null;
     flow = executorLoader.fetchExecutableFlow(execId);
     if (flow == null) {
-      throw new ExecutorManagerException("Error loading flow with exec "
-          + execId);
+      throw new ExecutorManagerException("Error loading flow with exec "  + execId);
     }
 
     // Sets up the project files and execution directory.
+    logger.info(">>> Sets up the project files and execution directory");
     flowPreparer.setup(flow);
 
     // Setup flow runner
+    logger.info(">>> Sets up flow runner");
     FlowWatcher watcher = null;
     ExecutionOptions options = flow.getExecutionOptions();
     if (options.getPipelineExecutionId() != null) {
@@ -511,15 +516,12 @@ public class FlowRunnerManager implements EventListener,
           numJobThreads = numJobs;
         }
       } catch (Exception e) {
-        throw new ExecutorManagerException(
-            "Failed to set the number of job threads "
-                + options.getFlowParameters().get(FLOW_NUM_JOB_THREADS)
-                + " for flow " + execId, e);
+        throw new ExecutorManagerException("Failed to set the number of job threads "
+                + options.getFlowParameters().get(FLOW_NUM_JOB_THREADS) + " for flow " + execId, e);
       }
     }
 
-    FlowRunner runner =
-        new FlowRunner(flow, executorLoader, projectLoader, jobtypeManager, azkabanProps);
+    FlowRunner runner = new FlowRunner(flow, executorLoader, projectLoader, jobtypeManager, azkabanProps);
     runner.setFlowWatcher(watcher)
         .setJobLogSettings(jobLogChunkSize, jobLogNumFiles)
         .setValidateProxyUser(validateProxyUser)
@@ -529,8 +531,7 @@ public class FlowRunnerManager implements EventListener,
 
     // Check again.
     if (runningFlows.containsKey(execId)) {
-      throw new ExecutorManagerException("Execution " + execId
-          + " is already running.");
+      throw new ExecutorManagerException("Execution " + execId + " is already running.");
     }
 
     // Finally, queue the sucker.

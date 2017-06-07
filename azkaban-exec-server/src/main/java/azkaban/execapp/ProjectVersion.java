@@ -16,11 +16,9 @@
 
 package azkaban.execapp;
 
-import com.google.common.base.Preconditions;
-import java.io.File;
-import org.apache.log4j.Logger;
+import static com.google.common.base.Preconditions.checkArgument;
 
-import static com.google.common.base.Preconditions.*;
+import java.io.File;
 
 
 public class ProjectVersion implements Comparable<ProjectVersion> {
