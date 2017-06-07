@@ -442,7 +442,6 @@ private synchronized void uploadExecutableFlow(Connection connection,
   public void removeActiveExecutableReference(int execid)
       throws ExecutorManagerException {
     final String DELETE = "DELETE FROM active_executing_flows WHERE exec_id=?";
-
     QueryRunner runner = createQueryRunner();
     try {
       runner.update(DELETE, execid);
@@ -462,12 +461,12 @@ private synchronized void uploadExecutableFlow(Connection connection,
     try {
       updateNum = runner.update(DELETE, updateTime, execId);
     } catch (SQLException e) {
-    	logger.info("Error deleting active flow reference " + execId, e);
-//      throw new ExecutorManagerException(
-//          "Error deleting active flow reference " + execId, e);
+    	logger.info("logger.Error deleting active flow reference " + execId, e);
     }
+    logger.info(">>> updateExecutableReference, execId:" + execId + ", updateTime:" + updateTime + ",updateNum:" + updateNum);
     //start retry
     if (updateNum > 0) {
+    	logger.info(">>> updateExecutableReference, UPDATE active_executing_flows success, execId:" + execId );
     	return true;
 	}
     //when updateNum<=0
@@ -477,16 +476,14 @@ private synchronized void uploadExecutableFlow(Connection connection,
     	try {
 			Thread.currentThread().sleep(2000);
 		} catch (InterruptedException e) {
-			logger.error(">>> updateExecutableReference, retry throw exception:", e);
+			logger.error(">>> updateExecutableReference, retry throw InterruptedException:", e);
 		}
     	updateExecutableReference(execId, System.currentTimeMillis());
 	} else{
-		throw new ExecutorManagerException("Error deleting active flow reference " + execId);
+		logger.info(">>> updateExecutableReference, has retry 3 times, still failed, throw exception");
+		throw new ExecutorManagerException("exception.Error deleting active flow reference " + execId);
 	}
     //end retry
-    // Should be 1.
-    logger.info(">>> updateExecutableReference, execId:"+execId+",updateTime:"+updateTime+",updateNum:"+updateNum);
-//    return updateNum > 0;
     return false;
   }
 
