@@ -315,11 +315,12 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
 							executorLoader.redoExecutor(dsFlow.getExecutionId(), Status.PREPARING.getNumVal(), "system redo", System.currentTimeMillis());
 							Thread.currentThread().sleep(1000);
 							//查询返回值
-							ExecutableFlow flow = executorLoader.fetchExecutableFlow(dsFlow.getExecutionId());
-							if (flow == null || flow.getStatus().getNumVal() != Status.PREPARING.getNumVal()) {
-								logger.info(String.format(">>> end status: %s is not %s", flow.getStatus().getNumVal(), Status.PREPARING.getNumVal()));
+							List<ExecutableFlow> flows = executorLoader.fetchFlowHistory(dsFlow.getProjectId(), dsFlow.getFlowId(), 0, 10, Status.PREPARING);
+							if (flows == null || flows.size() == 0) {
 								wait(REDO_TIME_TO_LIVE);
 								return;
+							} else {
+								logger.info(String.format(">>> status: %s is not %s", flows.get(0).getStatus().getNumVal(), Status.PREPARING.getNumVal()));
 							}
 							logger.info(String.format(">>> 2,addRedoActiveExecutableReference, ExecutionId: %s", dsFlow.getExecutionId()));
 							executorLoader.addRedoActiveExecutableReference(dsFlow.getExecutionId());
