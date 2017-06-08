@@ -311,11 +311,16 @@ public class FlowRunnerManager implements EventListener,
 					logger.info(String.format(">>> loading from db, status: %s, submit_time: %s", 70, curDateLong()));
 					dsFlow = executorLoader.fetchExecuteFailedFlow(70, curDateLong());
 					if (dsFlow != null && dsFlow.getExecutionId() > 0) {
-						logger.info(String.format(">>> start \n 1,resubmit flow(addRedoActiveExecutableReference), ExecutionId: %s", dsFlow.getExecutionId()));
-						executorLoader.addRedoActiveExecutableReference(dsFlow.getExecutionId());
-						logger.info(String.format(">>> 2, resubmit flow(submitFlow), ExecutionId: %s", dsFlow.getExecutionId()));
-						submitFlow(dsFlow.getExecutionId());
-						logger.info(String.format(">>> 3, resubmit flow(execution_logs:attemptNo+1), ExecutionId: %s", dsFlow.getExecutionId()));
+						logger.info(String.format(">>> start resubmit flow, ExecutionId: %s", dsFlow.getExecutionId()));
+						if (!runningFlows.containsKey(dsFlow.getExecutionId())) {
+							logger.info(String.format(">>> 1,resubmit flow(addRedoActiveExecutableReference), ExecutionId: %s", dsFlow.getExecutionId()));
+							executorLoader.addRedoActiveExecutableReference(dsFlow.getExecutionId());
+							logger.info(String.format(">>> 2, resubmit flow(submitFlow), ExecutionId: %s", dsFlow.getExecutionId()));
+							submitFlow(dsFlow.getExecutionId());
+							logger.info(String.format(">>> 3, resubmit flow(execution_logs:attemptNo+1), ExecutionId: %s", dsFlow.getExecutionId()));
+						} else {
+							logger.info(String.format(">>> end ExecutionId: %s is running", dsFlow.getExecutionId()));
+						}
 						logger.info(String.format(">>> end resubmit flow, ExecutionId: %s", dsFlow.getExecutionId()));
 					}
 					wait(REDO_TIME_TO_LIVE);
