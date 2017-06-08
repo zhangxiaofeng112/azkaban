@@ -558,8 +558,9 @@ public class JobRunner extends EventHandler implements Runnable {
     }
     //TODO zxf
     //重试没办法解析data字段，直接对attempt+1处理
-    int attemptNo = node.getAttempt() + 1;
-    logInfo(">>> Finishing job " + this.jobId + " attempt(start 1): " + attemptNo + " at "
+    int attemptNo = node.getAttempt();
+//     + 1
+    logInfo(">>> Finishing job " + this.jobId + " attempt: " + attemptNo + " at "
         + node.getEndTime() + " with status " + node.getStatus());
 
     fireEvent(Event.create(this, Type.JOB_FINISHED, new EventData(finalStatus)), false);

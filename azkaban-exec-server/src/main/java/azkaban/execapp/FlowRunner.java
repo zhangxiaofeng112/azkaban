@@ -948,6 +948,7 @@ private void updateFlowReference() throws ExecutorManagerException {
   public void retryFailures(String user) {
     synchronized (mainSyncObj) {
       logger.info("Retrying failures invoked by " + user);
+      logger.info(">>> Retrying failures invoked by " + user);
       retryFailedJobs = true;
       interrupt();
     }
