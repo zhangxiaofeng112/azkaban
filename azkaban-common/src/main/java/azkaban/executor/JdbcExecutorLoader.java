@@ -1594,7 +1594,7 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
 
     //TODO zxf add select
     private static String FETCH_EXECUTATE_FAIL_FLOW = 
-    		"SELECT exec_id, project_id, flow_id, version, status, enc_type, flow_data FROM execution_flows  "
+    		"SELECT exec_id, enc_type, flow_data FROM execution_flows  "
     		+ "WHERE status=? and submit_time >=? "
     		+ "ORDER BY exec_id DESC LIMIT 1";
     
