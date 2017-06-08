@@ -300,18 +300,20 @@ public class FlowRunnerManager implements EventListener,
 
 	@Override
 	public void run() {
-		logger.info(String.format(">>> azkaban.executor.redo: %s, azkaban.executor.redo.minutes: %s(minutes)", taskRedo, REDO_TIME_TO_LIVE));
-		synchronized (this) {
-			logger.info(String.format(">>> task redo, start"));
-			try {
-				long curtime = System.currentTimeMillis();
-				logger.info(String.format(">>> curtime: %d", curtime));
-				//
-				wait(REDO_TIME_TO_LIVE);
-			} catch (Exception e) {
-				logger.error(">>> ", e);
+		logger.info(String.format(">>> azkaban.executor.redo: %s, azkaban.executor.redo.minutes: %s(millis)", taskRedo, REDO_TIME_TO_LIVE));
+		while(true) {
+			synchronized (this) {
+				logger.info(String.format(">>> task redo, start"));
+				try {
+					long curtime = System.currentTimeMillis();
+					logger.info(String.format(">>> curtime: %d", curtime));
+					logger.info(">>> task redo, end");
+					//
+					wait(REDO_TIME_TO_LIVE);
+				} catch (Exception e) {
+					logger.error(">>> ", e);
+				}
 			}
-			logger.info(">>> task redo, end");
 		}
 	}
   }
