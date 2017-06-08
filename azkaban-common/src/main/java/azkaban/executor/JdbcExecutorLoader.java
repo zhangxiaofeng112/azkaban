@@ -88,6 +88,8 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
       DbUtils.closeQuietly(connection);
     }
   }
+  
+
 
   private synchronized void uploadExecutableFlow(Connection connection,
       ExecutableFlow flow, EncodingType encType)
@@ -1592,7 +1594,7 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
 
     //TODO zxf add select
     private static String FETCH_EXECUTATE_FAIL_FLOW = 
-    		"SELECT exec_id, enc_type, flow_data FROM execution_flows  "
+    		"SELECT exec_id, project_id, flow_id, version, status, enc_type, flow_data FROM execution_flows  "
     		+ "WHERE status=? and submit_time >=? "
     		+ "ORDER BY exec_id DESC LIMIT 1";
     
@@ -1767,4 +1769,20 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
         + executionId, e);
     }
   }
+  
+  @Override
+  public void redoExecutor(int executionId, int status, String submitUser, long updateTime) throws ExecutorManagerException {
+	logger.info(String.format("redoExecutor param[executionId: %s, status: %s, submitUser: %s, updateTime: %s]", executionId, status, submitUser, updateTime));
+    final String UPDATE = "UPDATE execution_flows SET status=?, submit_user=?, update_time=? where exec_id=?";
+    QueryRunner runner = createQueryRunner();
+    try {
+      int rows = runner.update(UPDATE, status, submitUser, updateTime, executionId);
+      if (rows == 0) {
+        throw new ExecutorManagerException(String.format("Failed to redo executor for execution : %d  ", executionId));
+      }
+    } catch (SQLException e) {
+      throw new ExecutorManagerException("Error redo execution id " + executionId, e);
+    }
+  }
+  
 }

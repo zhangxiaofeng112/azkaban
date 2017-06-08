@@ -91,8 +91,7 @@ import azkaban.utils.TrackingThreadPool;
  *
  *
  */
-public class FlowRunnerManager implements EventListener,
-    ThreadPoolExecutingListener {
+public class FlowRunnerManager implements EventListener, ThreadPoolExecutingListener {
   private static final Logger logger = Logger.getLogger(FlowRunnerManager.class);
 
   private static final String EXECUTOR_USE_BOUNDED_THREADPOOL_QUEUE = "executor.use.bounded.threadpool.queue";
@@ -308,17 +307,16 @@ public class FlowRunnerManager implements EventListener,
 			synchronized (this) {
 				ExecutableFlow dsFlow;
 				try {
-					logger.info(String.format(">>> loading from db, status: %s, submit_time: %s", 70, curDateLong()));
 					dsFlow = executorLoader.fetchExecuteFailedFlow(70, curDateLong());
 					if (dsFlow != null && dsFlow.getExecutionId() > 0) {
 						logger.info(String.format(">>> start resubmit flow, ExecutionId: %s", dsFlow.getExecutionId()));
 						if (!runningFlows.containsKey(dsFlow.getExecutionId())) {
-//							logger.info(String.format(">>> 1,resubmit flow(addRedoActiveExecutableReference), ExecutionId: %s", dsFlow.getExecutionId()));
-//							executorLoader.addRedoActiveExecutableReference(dsFlow.getExecutionId());
-//							logger.info(String.format(">>> 2, resubmit flow(submitFlow), ExecutionId: %s", dsFlow.getExecutionId()));
-//							submitFlow(dsFlow.getExecutionId());
-//							logger.info(String.format(">>> 3, resubmit flow(execution_logs:attemptNo+1), ExecutionId: %s", dsFlow.getExecutionId()));
-							retryFailures(dsFlow.getExecutionId(), "system auto");
+							logger.info(String.format(">>> 1,redoExecutor, ExecutionId: %s", dsFlow.getExecutionId()));
+							executorLoader.redoExecutor(dsFlow.getExecutionId(), Status.PREPARING.getNumVal(), "system redo", System.currentTimeMillis());
+							logger.info(String.format(">>> 2,addRedoActiveExecutableReference, ExecutionId: %s", dsFlow.getExecutionId()));
+							executorLoader.addRedoActiveExecutableReference(dsFlow.getExecutionId());
+							logger.info(String.format(">>> 3, submitFlow, ExecutionId: %s", dsFlow.getExecutionId()));
+							submitFlow(dsFlow.getExecutionId());
 						} else {
 							logger.info(String.format(">>> end ExecutionId: %s is running", dsFlow.getExecutionId()));
 						}
@@ -331,6 +329,7 @@ public class FlowRunnerManager implements EventListener,
 			}
 		}
 	}
+	
 	
 	/**
 	 * 当天00点开始的ms

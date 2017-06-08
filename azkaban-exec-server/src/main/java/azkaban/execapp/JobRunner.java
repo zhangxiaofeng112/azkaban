@@ -556,10 +556,7 @@ public class JobRunner extends EventHandler implements Runnable {
       // it being a legitimate failure.
       finalStatus = changeStatus(Status.KILLED);
     }
-    //TODO zxf
-    //重试没办法解析data字段，直接对attempt+1处理
     int attemptNo = node.getAttempt();
-//     + 1
     logInfo(">>> Finishing job " + this.jobId + " attempt: " + attemptNo + " at "
         + node.getEndTime() + " with status " + node.getStatus());
 

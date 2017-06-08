@@ -219,6 +219,15 @@ public interface ExecutorLoader {
   void unassignExecutor(int executionId) throws ExecutorManagerException;
 
   /**
+   * 重试
+   * @param executionId
+   * @param status
+   * @param submitUser
+   * @param updateTime
+   * @throws ExecutorManagerException
+   */
+  public void redoExecutor(int executionId, int status, String submitUser, long updateTime) throws ExecutorManagerException;
+  /**
    * <pre>
    * Set an executor Id to an execution
    * Note:-
