@@ -840,7 +840,7 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
       buf = Arrays.copyOf(buffer, length);
     }
 
-    runner.update(connection, INSERT_EXECUTION_LOGS, execId, name, attempt,
+    runner.update(connection, INSERT_EXECUTION_LOGS, execId, name, attempt+1,
         encType.getNumVal(), startByte, startByte + length, buf, DateTime.now()
             .getMillis());
   }

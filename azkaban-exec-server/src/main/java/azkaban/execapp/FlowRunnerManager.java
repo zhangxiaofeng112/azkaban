@@ -305,7 +305,7 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
 		logger.info(String.format(">>> if azkaban.executor.redo==false , will not start redo task, until next start exec-server. %s", taskRedo));
 		while(taskRedo) {
 			synchronized (this) {
-				ExecutableFlow dsFlow;
+				ExecutableFlow dsFlow = null;
 				try {
 					dsFlow = executorLoader.fetchExecuteFailedFlow(70, curDateLong());
 					if (dsFlow != null && dsFlow.getExecutionId() > 0) {
@@ -324,6 +324,7 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
 					}
 					wait(REDO_TIME_TO_LIVE);
 				} catch (Exception e) {
+					runningFlows.remove(dsFlow.getExecutionId());
 					logger.error(e);
 				}
 			}
