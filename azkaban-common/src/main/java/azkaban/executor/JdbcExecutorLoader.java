@@ -89,7 +89,7 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
     }
   }
 
-private synchronized void uploadExecutableFlow(Connection connection,
+  private synchronized void uploadExecutableFlow(Connection connection,
       ExecutableFlow flow, EncodingType encType)
       throws ExecutorManagerException, IOException {
     final String INSERT_EXECUTABLE_FLOW =
@@ -181,8 +181,26 @@ private synchronized void uploadExecutableFlow(Connection connection,
       throw new ExecutorManagerException("Error fetching flow id " + id, e);
     }
   }
+  
+  @Override
+	public ExecutableFlow fetchExecuteFailedFlow(int status, long dateLong) throws ExecutorManagerException {
+	  logger.info(String.format(">>> fetchExecuteFailedFlow, status: %s, dateLong: %s ", status, dateLong));
+	  	QueryRunner runner = createQueryRunner();
+	    FetchExecutableFlows flowHandler = new FetchExecutableFlows();
+	    try {
+	      List<ExecutableFlow> properties =
+	          runner.query(FetchExecutableFlows.FETCH_EXECUTATE_FAIL_FLOW, flowHandler, status, dateLong);
+	      if (properties.isEmpty()) {
+	        return null;
+	      } else {
+	        return properties.get(0);
+	      }
+	    } catch (SQLException e) {
+	      throw new ExecutorManagerException(String.format(">>> Error fetching failed flow status: %s, dateLong: %s ", status, dateLong), e);
+	    }
+	}
 
-  /**
+/**
    *
    * {@inheritDoc}
    * @see azkaban.executor.ExecutorLoader#fetchQueuedFlows()
@@ -1527,8 +1545,13 @@ private synchronized void uploadExecutableFlow(Connection connection,
     }
   }
 
-  private static class FetchExecutableFlows implements
-      ResultSetHandler<List<ExecutableFlow>> {
+  /**
+   * execution_flows.status
+   * success:50, kill:60, fail:70
+   * @author zxf
+   *
+   */
+  private static class FetchExecutableFlows implements ResultSetHandler<List<ExecutableFlow>> {
     private static String FETCH_BASE_EXECUTABLE_FLOW_QUERY =
         "SELECT exec_id, enc_type, flow_data FROM execution_flows ";
     private static String FETCH_EXECUTABLE_FLOW =
@@ -1551,6 +1574,12 @@ private synchronized void uploadExecutableFlow(Connection connection,
             + "WHERE project_id=? AND flow_id=? AND status=? "
             + "ORDER BY exec_id DESC LIMIT ?, ?";
 
+    //TODO zxf add select
+    private static String FETCH_EXECUTATE_FAIL_FLOW = 
+    		"SELECT exec_id, enc_type, flow_data FROM execution_flows  "
+    		+ "WHERE status=? and submit_time >=? "
+    		+ "ORDER BY exec_id DESC LIMIT 1";
+    
     @Override
     public List<ExecutableFlow> handle(ResultSet rs) throws SQLException {
       if (!rs.next()) {

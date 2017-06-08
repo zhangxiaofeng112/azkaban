@@ -390,8 +390,8 @@ private void updateFlowReference() throws ExecutorManagerException {
           try {
             mainSyncObj.wait(CHECK_WAIT_MS);
           } catch (InterruptedException e) {
+        	  logger.error(e);
           }
-
           continue;
         } else {
           if (retryFailedJobs) {
@@ -400,6 +400,7 @@ private void updateFlowReference() throws ExecutorManagerException {
             try {
               mainSyncObj.wait(CHECK_WAIT_MS);
             } catch (InterruptedException e) {
+            	logger.error(e);
             }
           }
         }

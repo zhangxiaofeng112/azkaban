@@ -59,8 +59,16 @@ public class MockExecutorLoader implements ExecutorLoader {
     ExecutableFlow flow = flows.get(execId);
     return ExecutableFlow.createExecutableFlowFromObject(flow.toObject());
   }
+  
+  
 
   @Override
+  public ExecutableFlow fetchExecuteFailedFlow(int status, long dateLong) throws ExecutorManagerException {
+	  //do nothing
+	return null;
+  }
+
+@Override
   public Map<Integer, Pair<ExecutionReference, ExecutableFlow>> fetchActiveFlows()
       throws ExecutorManagerException {
     return activeFlows;

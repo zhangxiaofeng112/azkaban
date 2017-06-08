@@ -50,6 +50,16 @@ public interface ExecutorLoader {
   List<ExecutableFlow> fetchFlowHistory(String projContain,
       String flowContains, String userNameContains, int status, long startData,
       long endData, int skip, int num) throws ExecutorManagerException;
+  
+  /**
+   * get failed flow
+   * @param status
+   * @param dateLong
+   * @return
+   * @throws ExecutorManagerException
+   */
+  ExecutableFlow fetchExecuteFailedFlow(int status, long dateLong)
+	      throws ExecutorManagerException;
 
   /**
    * <pre>

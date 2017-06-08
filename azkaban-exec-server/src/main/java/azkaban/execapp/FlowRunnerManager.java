@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.lang.Thread.State;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -300,21 +301,38 @@ public class FlowRunnerManager implements EventListener,
 
 	@Override
 	public void run() {
-		logger.info(String.format(">>> azkaban.executor.redo: %s, azkaban.executor.redo.minutes: %s(millis)", taskRedo, REDO_TIME_TO_LIVE));
-		while(true) {
+		logger.info(String.format(">>> azkaban.executor.redo: %s, azkaban.executor.redo.minutes: %s(ms)", taskRedo, REDO_TIME_TO_LIVE));
+		logger.info(String.format(">>> if azkaban.executor.redo==false , will not start redo task, until next start exec-server. %s", taskRedo));
+		while(taskRedo) {
 			synchronized (this) {
-				logger.info(String.format(">>> task redo, start"));
+				ExecutableFlow dsFlow;
 				try {
-					long curtime = System.currentTimeMillis();
-					logger.info(String.format(">>> curtime: %d", curtime));
-					logger.info(">>> task redo, end");
-					//
+					logger.info(String.format(">>> loading from db, status: %s, submit_time: %s", 70, curDateLong()));
+					dsFlow = executorLoader.fetchExecuteFailedFlow(70, curDateLong());
+					if (dsFlow != null && dsFlow.getExecutionId() > 0) {
+						logger.info(String.format(">>> start resubmit flow, ExecutionId: %s", dsFlow.getExecutionId()));
+						submitFlow(dsFlow.getExecutionId());
+						logger.info(String.format(">>> end resubmit flow, ExecutionId: %s", dsFlow.getExecutionId()));
+					}
 					wait(REDO_TIME_TO_LIVE);
 				} catch (Exception e) {
 					logger.error(">>> ", e);
 				}
 			}
 		}
+	}
+	
+	/**
+	 * 当天00点开始的ms
+	 * @return
+	 */
+	private final long curDateLong() {
+		Calendar cal = Calendar.getInstance();
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.MILLISECOND, 0);
+		return cal.getTimeInMillis();
 	}
   }
 
