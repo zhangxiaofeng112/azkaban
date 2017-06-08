@@ -473,6 +473,22 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
 		throw new ExecutorManagerException("Error updating active flow reference " + reference.getExecId());
 	}
   }
+  
+  /**
+   * 重试时产生新的active_executing_flows
+   * @param execId
+   */
+  @Override
+  public synchronized void addRedoActiveExecutableReference(int execId) {
+	logger.info(">>> add Redo ActiveExecutableReference, execId: " + execId);
+	final String INSERT = "INSERT INTO active_executing_flows(exec_id, update_time) values (?,?)";
+	QueryRunner runner = createQueryRunner();
+	try {
+	  runner.update(INSERT, execId, System.currentTimeMillis());
+	} catch (SQLException e) {
+	  logger.error(">>> add Redo ActiveExecutableReference, Error updating active flow reference " + execId, e);
+	}
+  }
 
   @Override
   public void removeActiveExecutableReference(int execid) throws ExecutorManagerException {

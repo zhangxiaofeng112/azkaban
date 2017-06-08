@@ -16,10 +16,6 @@
 
 package azkaban.execapp;
 
-import azkaban.Constants;
-import azkaban.executor.Status;
-import azkaban.storage.StorageManager;
-import com.google.inject.Inject;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -42,6 +38,9 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 
+import com.google.inject.Inject;
+
+import azkaban.Constants;
 import azkaban.event.Event;
 import azkaban.event.EventListener;
 import azkaban.execapp.event.FlowWatcher;
@@ -52,12 +51,14 @@ import azkaban.executor.ExecutableFlow;
 import azkaban.executor.ExecutionOptions;
 import azkaban.executor.ExecutorLoader;
 import azkaban.executor.ExecutorManagerException;
+import azkaban.executor.Status;
 import azkaban.jobtype.JobTypeManager;
 import azkaban.jobtype.JobTypeManagerException;
 import azkaban.metric.MetricReportManager;
 import azkaban.project.ProjectLoader;
 import azkaban.project.ProjectWhitelist;
 import azkaban.project.ProjectWhitelist.WhitelistType;
+import azkaban.storage.StorageManager;
 import azkaban.utils.FileIOUtils;
 import azkaban.utils.FileIOUtils.JobMetaData;
 import azkaban.utils.FileIOUtils.LogData;
@@ -310,8 +311,11 @@ public class FlowRunnerManager implements EventListener,
 					logger.info(String.format(">>> loading from db, status: %s, submit_time: %s", 70, curDateLong()));
 					dsFlow = executorLoader.fetchExecuteFailedFlow(70, curDateLong());
 					if (dsFlow != null && dsFlow.getExecutionId() > 0) {
-						logger.info(String.format(">>> start resubmit flow, ExecutionId: %s", dsFlow.getExecutionId()));
+						logger.info(String.format(">>> start \n 1,resubmit flow(addRedoActiveExecutableReference), ExecutionId: %s", dsFlow.getExecutionId()));
+						executorLoader.addRedoActiveExecutableReference(dsFlow.getExecutionId());
+						logger.info(String.format(">>> 2, resubmit flow(submitFlow), ExecutionId: %s", dsFlow.getExecutionId()));
 						submitFlow(dsFlow.getExecutionId());
+						logger.info(String.format(">>> 3, resubmit flow(execution_logs:attemptNo+1), ExecutionId: %s", dsFlow.getExecutionId()));
 						logger.info(String.format(">>> end resubmit flow, ExecutionId: %s", dsFlow.getExecutionId()));
 					}
 					wait(REDO_TIME_TO_LIVE);

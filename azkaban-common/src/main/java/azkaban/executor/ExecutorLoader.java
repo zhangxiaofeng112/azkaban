@@ -197,7 +197,14 @@ public interface ExecutorLoader {
   void removeActiveExecutableReference(int execId)
       throws ExecutorManagerException;
 
-
+  /**
+   * 重试
+   * @param execId
+   * @throws ExecutorManagerException
+   */
+  void addRedoActiveExecutableReference(int execId)
+	      throws ExecutorManagerException;
+  
   /**
    * <pre>
    * Unset executor Id for an execution
