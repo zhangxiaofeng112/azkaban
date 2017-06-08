@@ -291,7 +291,7 @@ public class FlowRunnerManager implements EventListener,
 	  //任务执行失败时重试
 	  private final boolean taskRedo = azkabanProps.getBoolean(Constants.ConfigurationKeys.AZKABAN_EXECUTOR_REDO, false);
 	  //任务失败重试时间间隔
-	  private final int taskRedoMins = azkabanProps.getInt(Constants.ConfigurationKeys.AZKABAN_EXECUTOR_REDO_MINS, 5);
+	  private final int REDO_TIME_TO_LIVE = azkabanProps.getInt(Constants.ConfigurationKeys.AZKABAN_EXECUTOR_REDO_MINS, 1) * 60 * 1000;
 	  
 	  public RedoThread() {
 		  this.setName(">>> FlowRunnerManager-TaskRedo-Thread");
@@ -300,16 +300,14 @@ public class FlowRunnerManager implements EventListener,
 
 	@Override
 	public void run() {
-		logger.info(String.format(">>> azkaban.executor.redo: %s, azkaban.executor.redo.minutes: %s(minutes)", taskRedo, taskRedoMins));
-		if (!taskRedo) {
-			return;
-		}
+		logger.info(String.format(">>> azkaban.executor.redo: %s, azkaban.executor.redo.minutes: %s(minutes)", taskRedo, REDO_TIME_TO_LIVE));
 		synchronized (this) {
-			logger.info(">>> task redo, start");
+			logger.info(String.format(">>> task redo, start"));
 			try {
 				long curtime = System.currentTimeMillis();
-				long taskRedoMill = taskRedoMins * 60 * 1000;
-				logger.info(">>> ");
+				logger.info(String.format(">>> curtime: %d", curtime));
+				//
+				wait(REDO_TIME_TO_LIVE);
 			} catch (Exception e) {
 				logger.error(">>> ", e);
 			}
