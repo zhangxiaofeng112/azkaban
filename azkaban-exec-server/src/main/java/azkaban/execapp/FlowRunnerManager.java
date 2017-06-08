@@ -302,14 +302,14 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
 	@Override
 	public void run() {
 		logger.info(String.format(">>> azkaban.executor.redo: %s, azkaban.executor.redo.minutes: %s(ms)", taskRedo, REDO_TIME_TO_LIVE));
-		logger.info(String.format(">>> if azkaban.executor.redo==false , will not start redo task, until next start exec-server. %s", taskRedo));
 		while(taskRedo) {
 			synchronized (this) {
 				ExecutableFlow dsFlow = null;
 				try {
+					wait(600000);
 					dsFlow = executorLoader.fetchExecuteFailedFlow(70, curDateLong());
 					if (dsFlow != null && dsFlow.getExecutionId() > 0) {
-						logger.info(String.format(">>> start resubmit flow, ExecutionId: %s", dsFlow.getExecutionId()));
+						logger.info(String.format(">>> start resubmit flow, ExecutionId: %s, tid: %s", dsFlow.getExecutionId(), Thread.currentThread().getId()));
 						if (!runningFlows.containsKey(dsFlow.getExecutionId())) {
 							logger.info(String.format(">>> 1,redoExecutor, ExecutionId: %s", dsFlow.getExecutionId()));
 							executorLoader.redoExecutor(dsFlow.getExecutionId(), Status.PREPARING.getNumVal(), "system redo", System.currentTimeMillis());
