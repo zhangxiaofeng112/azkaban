@@ -954,21 +954,16 @@ public class ExecutorManager extends EventHandler implements
     }
   }
 
-  /**
-   * 
-   */
+  //TODO zxf
   @Override
-  public String submitExecutableFlow(ExecutableFlow exflow, String userId)
-    throws ExecutorManagerException {
+  public String submitExecutableFlow(ExecutableFlow exflow, String userId) throws ExecutorManagerException {
 
     String exFlowKey = exflow.getProjectName() + "." + exflow.getId() + ".submitFlow";
     // using project and flow name to prevent race condition when same flow is submitted by API and schedule at the same time
     // causing two same flow submission entering this piece.
     synchronized (exFlowKey.intern()) {
       String flowId = exflow.getFlowId();
-
       logger.info("Submitting execution flow " + flowId + " by " + userId);
-
       String message = "";
       if (queuedFlows.isFull()) {
         message =
@@ -1025,13 +1020,14 @@ public class ExecutorManager extends EventHandler implements
 
         // The exflow id is set by the loader. So it's unavailable until after
         // this call.
+        logger.info(">>> insert execution_flows data, execId: " + exflow.getExecutionId());
         executorLoader.uploadExecutableFlow(exflow);
 
         // We create an active flow reference in the datastore. If the upload
         // fails, we remove the reference.
         ExecutionReference reference =
           new ExecutionReference(exflow.getExecutionId());
-
+        logger.info(">>> isMultiExecutorMode: " + isMultiExecutorMode());
         if (isMultiExecutorMode()) {
           //Take MultiExecutor route
           executorLoader.addActiveExecutableReference(reference);
@@ -1043,14 +1039,11 @@ public class ExecutorManager extends EventHandler implements
           try {
             dispatch(reference, exflow, choosenExecutor);
           } catch (ExecutorManagerException e) {
-            executorLoader.removeActiveExecutableReference(reference
-              .getExecId());
+            executorLoader.removeActiveExecutableReference(reference.getExecId());
             throw e;
           }
         }
-        message +=
-          "Execution submitted successfully with exec id "
-            + exflow.getExecutionId();
+        message += "Execution submitted successfully with exec id " + exflow.getExecutionId();
       }
       return message;
     }
@@ -1330,7 +1323,7 @@ public class ExecutorManager extends EventHandler implements
                     ExecutableFlow flow = updateExecution(updateMap);
 
                     updaterStage = "Updated flow " + flow.getExecutionId();
-
+                    logger.info(String.format(">>> flow: %s, isFinished: %s", flow.getExecutionId(), isFinished(flow)));
                     if (isFinished(flow)) {
                       finishedFlows.add(flow);
                       finalizeFlows.add(flow);
@@ -1791,8 +1784,7 @@ public class ExecutorManager extends EventHandler implements
     executorLoader.assignExecutor(choosenExecutor.getId(),
       exflow.getExecutionId());
     try {
-      callExecutorServer(exflow, choosenExecutor,
-        ConnectorParams.EXECUTE_ACTION);
+      callExecutorServer(exflow, choosenExecutor, ConnectorParams.EXECUTE_ACTION);
     } catch (ExecutorManagerException ex) {
       logger.error("Rolling back executor assignment for execution id:"
         + exflow.getExecutionId(), ex);
@@ -1801,8 +1793,7 @@ public class ExecutorManager extends EventHandler implements
     }
     reference.setExecutor(choosenExecutor);
 
-    logger.info(String.format(
-      "Successfully dispatched exec %d with error count %d",
+    logger.info(String.format("Successfully dispatched exec %d with error count %d",
       exflow.getExecutionId(), reference.getNumErrors()));
   }
 

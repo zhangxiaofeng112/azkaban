@@ -306,6 +306,11 @@ public class TriggerManager extends EventHandler implements
       }
     }
 
+    /**
+     * 
+     * @param t
+     * @throws TriggerManagerException
+     */
     private void onTriggerTrigger(Trigger t) throws TriggerManagerException {
       List<TriggerAction> actions = t.getTriggerActions();
       for (TriggerAction action : actions) {
@@ -331,6 +336,11 @@ public class TriggerManager extends EventHandler implements
       }
     }
 
+    /**
+     * 处理过期trigger
+     * @param t
+     * @throws TriggerManagerException
+     */
     private void onTriggerExpire(Trigger t) throws TriggerManagerException {
       List<TriggerAction> expireActions = t.getExpireActions();
       for (TriggerAction action : expireActions) {

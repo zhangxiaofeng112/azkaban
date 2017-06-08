@@ -203,8 +203,7 @@ public class ExecutorManagerServlet extends AbstractServiceServlet {
   }
 
   @SuppressWarnings("unchecked")
-  private void handleAjaxUpdateRequest(HttpServletRequest req,
-      HashMap<String, Object> respMap) {
+  private void handleAjaxUpdateRequest(HttpServletRequest req, HashMap<String, Object> respMap) {
     try {
       ArrayList<Object> updateTimesList =
           (ArrayList<Object>) JSONUtils.parseJSONFromString(getParam(req,
@@ -221,8 +220,7 @@ public class ExecutorManagerServlet extends AbstractServiceServlet {
         ExecutableFlow flow = executorManager.getExecutableFlow(execId);
         if (flow == null) {
           Map<String, Object> errorResponse = new HashMap<String, Object>();
-          errorResponse.put(ExecutorManagerAdapter.INFO_ERROR,
-              "Flow does not exist");
+          errorResponse.put(ExecutorManagerAdapter.INFO_ERROR, "Flow does not exist");
           errorResponse.put(ExecutorManagerAdapter.INFO_EXEC_ID, execId);
           updateList.add(errorResponse);
           continue;

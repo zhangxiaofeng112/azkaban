@@ -118,7 +118,9 @@ public class FlowRunnerManager implements EventListener,
   private final ProjectLoader projectLoader;
   private final JobTypeManager jobtypeManager;
   private final FlowPreparer flowPreparer;
-
+  //任务重试
+  private final RedoThread redoThread;
+  
   private final Props azkabanProps;
   private final File executionDirectory;
   private final File projectDirectory;
@@ -130,10 +132,11 @@ public class FlowRunnerManager implements EventListener,
   private int numJobThreadPerFlow = DEFAULT_FLOW_NUM_JOB_TREADS;
 
   private Props globalProps;
-
+  
+  //最后一次执行cleaner时间
   private long lastCleanerThreadCheckTime = -1;
   private long executionDirRetention = 1 * 24 * 60 * 60 * 1000; // 1 Day
-
+  
   // We want to limit the log sizes to about 20 megs
   private String jobLogChunkSize = "5MB";
   private int jobLogNumFiles = 4;
@@ -186,7 +189,12 @@ public class FlowRunnerManager implements EventListener,
 
 
     cleanerThread = new CleanerThread();
+    logger.info(">>> start cleanerThread(demon)");
     cleanerThread.start();
+    
+    redoThread = new RedoThread();
+    logger.info(">>> start redoThread(demon)");
+    redoThread.start();
 
     String globalPropsPath = props.getString("executor.global.properties", null);
     if (globalPropsPath != null) {
@@ -272,6 +280,42 @@ public class FlowRunnerManager implements EventListener,
 
   public void setGlobalProps(Props globalProps) {
     this.globalProps = globalProps;
+  }
+  
+  /**
+   * 任务重试
+   * @author zxf
+   *
+   */
+  private class RedoThread extends Thread {
+	  //任务执行失败时重试
+	  private final boolean taskRedo = azkabanProps.getBoolean(Constants.ConfigurationKeys.AZKABAN_EXECUTOR_REDO, false);
+	  //任务失败重试时间间隔
+	  private final int taskRedoMins = azkabanProps.getInt(Constants.ConfigurationKeys.AZKABAN_EXECUTOR_REDO_MINS, 5);
+	  
+	  public RedoThread() {
+		  this.setName(">>> FlowRunnerManager-TaskRedo-Thread");
+		  setDaemon(true);
+	  }
+
+	@Override
+	public void run() {
+		logger.info(String.format(">>> azkaban.executor.redo: %s, azkaban.executor.redo.minutes: %s(minutes)", taskRedo, taskRedoMins));
+		if (!taskRedo) {
+			return;
+		}
+		synchronized (this) {
+			logger.info(">>> task redo, start");
+			try {
+				long curtime = System.currentTimeMillis();
+				long taskRedoMill = taskRedoMins * 60 * 1000;
+				logger.info(">>> ");
+			} catch (Exception e) {
+				logger.error(">>> ", e);
+			}
+			logger.info(">>> task redo, end");
+		}
+	}
   }
 
   private class CleanerThread extends Thread {

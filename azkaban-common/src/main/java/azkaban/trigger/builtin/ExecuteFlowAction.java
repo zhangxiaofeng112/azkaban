@@ -300,8 +300,7 @@ public class ExecuteFlowAction implements TriggerAction {
 
   @Override
   public String getDescription() {
-    return "Execute flow " + getFlowName() + " from project "
-        + getProjectName();
+    return "Execute flow " + getFlowName() + " from project " + getProjectName();
   }
 
   @Override

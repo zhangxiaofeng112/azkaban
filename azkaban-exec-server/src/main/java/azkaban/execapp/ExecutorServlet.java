@@ -292,7 +292,7 @@ public class ExecutorServlet extends HttpServlet implements ConnectorParams {
   private void handleAjaxExecute(HttpServletRequest req,
       Map<String, Object> respMap, int execId) throws ServletException {
     try {
-      logger.info(">>> handleAjaxExecute, execId: " + execId);
+      logger.info(String.format(">>> handleAjaxExecute, execId: %s", execId));
       flowRunnerManager.submitFlow(execId);
     } catch (ExecutorManagerException e) {
       e.printStackTrace();

@@ -91,6 +91,10 @@ public class Constants {
     public static final String AZKABAN_STORAGE_TYPE = "azkaban.storage.type";
     public static final String AZKABAN_STORAGE_LOCAL_BASEDIR = "azkaban.storage.local.basedir";
     public static final String AZKABAN_STORAGE_HDFS_ROOT_URI = "azkaban.storage.hdfs.root.uri";
+    //任务失败重试
+    public static final String AZKABAN_EXECUTOR_REDO = "azkaban.executor.redo";
+    //任务失败重试时间间隔
+    public static final String AZKABAN_EXECUTOR_REDO_MINS = "azkaban.executor.redo.minutes";
   }
 
   public static class FlowProperties {

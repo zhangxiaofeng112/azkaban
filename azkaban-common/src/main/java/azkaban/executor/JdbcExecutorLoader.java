@@ -422,9 +422,8 @@ private synchronized void uploadExecutableFlow(Connection connection,
     }
   }
 
-  //TODO zxf
   @SuppressWarnings("static-access")
-@Override
+  @Override
   public synchronized void addActiveExecutableReference(ExecutionReference reference) throws ExecutorManagerException {
     final String INSERT = "INSERT INTO active_executing_flows(exec_id, update_time) values (?,?)";
     QueryRunner runner = createQueryRunner();
@@ -436,7 +435,6 @@ private synchronized void uploadExecutableFlow(Connection connection,
       id = runner.query(connection, LastInsertID.LAST_INSERT_ID, new LastInsertID());
     } catch (SQLException e) {
       logger.error("Error updating active flow reference " + reference.getExecId(), e);
-//      throw new ExecutorManagerException("Error updating active flow reference " + reference.getExecId(), e);
     }
     logger.info(">>> addActiveExecutableReference, id: " + id);
     if (id > 0L) {
@@ -459,22 +457,21 @@ private synchronized void uploadExecutableFlow(Connection connection,
   }
 
   @Override
-  public void removeActiveExecutableReference(int execid)
-      throws ExecutorManagerException {
+  public void removeActiveExecutableReference(int execid) throws ExecutorManagerException {
     final String DELETE = "DELETE FROM active_executing_flows WHERE exec_id=?";
     QueryRunner runner = createQueryRunner();
     try {
       runner.update(DELETE, execid);
     } catch (SQLException e) {
-      throw new ExecutorManagerException(
-          "Error deleting active flow reference " + execid, e);
+      throw new ExecutorManagerException("Error deleting active flow reference " + execid, e);
     }
+    logger.info(String.format("DELETE FROM active_executing_flows WHERE exec_id=%d", execid));
   }
 
   @SuppressWarnings("static-access")
-@Override
+  @Override
   public synchronized boolean updateExecutableReference(int execId, long updateTime) throws ExecutorManagerException {
-	logger.info(">>> updateExecutableReference, execId:"+execId+",updateTime:"+updateTime);
+	logger.info(">>> updateExecutableReference, execId: " + execId + ", updateTime: " + updateTime + ", curThreadId: " + Thread.currentThread().getId());
     final String DELETE = "UPDATE active_executing_flows set update_time=? WHERE exec_id=?";
     QueryRunner runner = createQueryRunner();
     int updateNum = 0;
@@ -486,7 +483,7 @@ private synchronized void uploadExecutableFlow(Connection connection,
     logger.info(">>> updateExecutableReference, execId:" + execId + ", updateTime:" + updateTime + ",updateNum:" + updateNum);
     //start retry
     if (updateNum > 0) {
-    	logger.info(">>> updateExecutableReference, UPDATE active_executing_flows success, execId:" + execId );
+    	logger.info(">>> updateExecutableReference, UPDATE active_executing_flows success, execId:" + execId + ", curThreadId: " + Thread.currentThread().getId());
     	return true;
 	}
     //when updateNum<=0
@@ -500,7 +497,7 @@ private synchronized void uploadExecutableFlow(Connection connection,
 		}
     	updateExecutableReference(execId, System.currentTimeMillis());
 	} else{
-		logger.info(">>> updateExecutableReference, has retry 3 times, still failed, throw exception");
+		logger.info(">>> updateExecutableReference, has retry 3 times, still failed, throw exception, curThreadId: " + Thread.currentThread().getId());
 		throw new ExecutorManagerException("exception.Error deleting active flow reference " + execId);
 	}
     //end retry
