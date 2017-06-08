@@ -299,6 +299,7 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
 		  setDaemon(true);
 	  }
 
+	@SuppressWarnings("static-access")
 	@Override
 	public void run() {
 		logger.info(String.format(">>> azkaban.executor.redo: %s, azkaban.executor.redo.minutes: %s(ms)", taskRedo, REDO_TIME_TO_LIVE));
@@ -312,17 +313,20 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
 						if (!runningFlows.containsKey(dsFlow.getExecutionId())) {
 							logger.info(String.format(">>> 1,redoExecutor, ExecutionId: %s", dsFlow.getExecutionId()));
 							executorLoader.redoExecutor(dsFlow.getExecutionId(), Status.PREPARING.getNumVal(), "system redo", System.currentTimeMillis());
+							Thread.currentThread().sleep(1000);
 							//查询返回值
 							ExecutableFlow flow = executorLoader.fetchExecutableFlow(dsFlow.getExecutionId());
 							if (flow != null) {
 								logger.info(String.format(">>> %s, %s", flow.getExecutionId(), flow.getStatus()));
 								if (flow.getStatus() != Status.PREPARING) {
 									logger.info(String.format(">>> end status: %s is not %s", flow.getStatus().getNumVal(), Status.PREPARING.getNumVal()));
+									wait(REDO_TIME_TO_LIVE);
 									return;
 								}
 							}
 							logger.info(String.format(">>> 2,addRedoActiveExecutableReference, ExecutionId: %s", dsFlow.getExecutionId()));
 							executorLoader.addRedoActiveExecutableReference(dsFlow.getExecutionId());
+							Thread.currentThread().sleep(1000);
 							logger.info(String.format(">>> 3, submitFlow, ExecutionId: %s", dsFlow.getExecutionId()));
 							submitFlow(dsFlow.getExecutionId());
 						} else {
