@@ -36,6 +36,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.kafka.common.metrics.Stat;
 import org.apache.log4j.Logger;
 
 import com.google.inject.Inject;
@@ -306,22 +307,29 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
 		while(taskRedo) {
 			synchronized (this) {
 				ExecutableFlow dsFlow = null;
+				Long newExecId = 0L;
 				try {
 					dsFlow = executorLoader.fetchExecuteFailedFlow(70, curDateLong());
-					if (dsFlow != null && dsFlow.getExecutionId() > 0) {
-						logger.info(String.format(">>> start resubmit flow, ExecutionId: %s, tid: %s", dsFlow.getExecutionId(), Thread.currentThread().getId()));
-						if (!runningFlows.containsKey(dsFlow.getExecutionId())) {
-							Long execId = executorLoader.redoExecutor(dsFlow.getExecutionId());
-							executorLoader.addRedoActiveExecutableReference(execId.intValue());
-							submitFlow(execId.intValue());
+					if (dsFlow != null && dsFlow.getExecutionId() != 0 && !runningFlows.containsKey(dsFlow.getExecutionId())) {
+						newExecId = executorLoader.redoExecutor(dsFlow.getExecutionId());
+						if (!runningFlows.containsKey(newExecId)) {
+							executorLoader.addRedoActiveExecutableReference(newExecId.intValue());
+							submitFlow(newExecId.intValue());
 						} else {
-							logger.info(String.format(">>> end ExecutionId: %s is running", dsFlow.getExecutionId()));
+							logger.info(String.format(">>> newExecId: %s is running", newExecId.intValue()));
 						}
-						logger.info(String.format(">>> end resubmit flow, ExecutionId: %s", dsFlow.getExecutionId()));
+					} else {
+						logger.info(String.format(">>> ExecutionId: %s is running", dsFlow.getExecutionId()));
 					}
 					wait(REDO_TIME_TO_LIVE);
 				} catch (Exception e) {
 					runningFlows.remove(dsFlow.getExecutionId());
+					try {
+						executorLoader.removeActiveExecutableReference(newExecId.intValue());
+						executorLoader.updateExecFlow(newExecId.intValue(), Status.CANCELLED.getNumVal(), "system redo");
+					} catch (ExecutorManagerException ex) {
+						logger.error(ex);
+					}
 					logger.error(e);
 				}
 			}
@@ -547,13 +555,13 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
     if (runningFlows.containsKey(execId)) {
       throw new ExecutorManagerException("Execution " + execId + " is already running.");
     }
-
+    
     ExecutableFlow flow = null;
     flow = executorLoader.fetchExecutableFlow(execId);
     if (flow == null) {
       throw new ExecutorManagerException("Error loading flow with exec "  + execId);
     }
-
+    logger.info(String.format(">>> submitFlow, fetchExecutableFlow(),param execId:%s, flow:%s", execId, flow.toString()));
     // Sets up the project files and execution directory.
     logger.info(">>> Sets up the project files and execution directory");
     flowPreparer.setup(flow);

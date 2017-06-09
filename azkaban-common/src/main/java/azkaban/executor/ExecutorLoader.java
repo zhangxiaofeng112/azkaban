@@ -225,6 +225,15 @@ public interface ExecutorLoader {
    * @throws ExecutorManagerException
    */
   Long redoExecutor(int executionId) throws ExecutorManagerException;
+  
+  /**
+   * 
+   * @param executionId
+   * @param status
+   * @param submitUser
+   * @throws ExecutorManagerException
+   */
+  void updateExecFlow(int executionId, int status, String submitUser) throws ExecutorManagerException;
   /**
    * <pre>
    * Set an executor Id to an execution

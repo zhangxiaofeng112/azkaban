@@ -1787,6 +1787,7 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
 	      if (id == -1L) {
 			throw new ExecutorManagerException(">>> redoExecutor Execution id is not properly created.");
 		  }
+	      this.updateExecFlow(executionId, Status.DISABLED.getNumVal(), "system redo");
 	      logger.info(String.format(">>> redoExecutor success, source_execId: %s, targe_execId: %s", executionId, id));
 	      return id;
 	    } catch (SQLException e) {
@@ -1794,4 +1795,20 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
 	    } 
   }
   
+  @Override
+  public void updateExecFlow(int executionId, int status, String submitUser) throws ExecutorManagerException {
+	  logger.info(String.format(">>> updateExecFlow param[executionId: %s, status: %s, submitUser: %s]", executionId, status, submitUser));
+	    final String UPDATE = "UPDATE execution_flows SET status=?, submit_user=?, update_time=? where exec_id=?";
+	    QueryRunner runner = createQueryRunner();
+	    Connection connection = getConnection();
+	    try {
+	      int rows = runner.update(UPDATE, status, submitUser, System.currentTimeMillis(), executionId);
+	      connection.commit();
+	      if (rows == 0) {
+	        throw new ExecutorManagerException(String.format("Failed to updateExecFlow for execution : %d  ", executionId));
+	      }
+	    } catch (SQLException e) {
+	      throw new ExecutorManagerException("Error updateExecFlow execution id " + executionId, e);
+	    }
+  }
 }
