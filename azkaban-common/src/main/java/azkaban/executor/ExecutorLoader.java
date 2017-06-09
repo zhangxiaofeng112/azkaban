@@ -219,14 +219,12 @@ public interface ExecutorLoader {
   void unassignExecutor(int executionId) throws ExecutorManagerException;
 
   /**
-   * 重试
+   * 根据原有executionId创建一个新的flow
    * @param executionId
-   * @param status
-   * @param submitUser
-   * @param updateTime
+   * @return
    * @throws ExecutorManagerException
    */
-  public void redoExecutor(int executionId, int status, String submitUser, long updateTime) throws ExecutorManagerException;
+  Long redoExecutor(int executionId) throws ExecutorManagerException;
   /**
    * <pre>
    * Set an executor Id to an execution

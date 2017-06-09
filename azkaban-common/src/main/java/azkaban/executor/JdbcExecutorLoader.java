@@ -89,8 +89,6 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
     }
   }
   
-
-
   private synchronized void uploadExecutableFlow(Connection connection,
       ExecutableFlow flow, EncodingType encType)
       throws ExecutorManagerException, IOException {
@@ -1771,18 +1769,29 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
   }
   
   @Override
-  public void redoExecutor(int executionId, int status, String submitUser, long updateTime) throws ExecutorManagerException {
-	logger.info(String.format("redoExecutor param[executionId: %s, status: %s, submitUser: %s, updateTime: %s]", executionId, status, submitUser, updateTime));
-    final String UPDATE = "UPDATE execution_flows SET status=?, submit_user=?, update_time=? where exec_id=?";
-    QueryRunner runner = createQueryRunner();
-    try {
-      int rows = runner.update(UPDATE, status, submitUser, updateTime, executionId);
-      if (rows == 0) {
-        throw new ExecutorManagerException(String.format("Failed to redo executor for execution : %d  ", executionId));
-      }
-    } catch (SQLException e) {
-      throw new ExecutorManagerException("Error redo execution id " + executionId, e);
-    }
+  public Long redoExecutor(int executionId) throws ExecutorManagerException {
+	logger.info(String.format(">>> redoExecutor param[executionId: %s]", executionId));
+	final String INSERT_EXECUTABLE_FLOW =
+	        "INSERT INTO execution_flows(project_id, version, flow_id, status, submit_user, submit_time, update_time, start_time, end_time, enc_type, flow_data, executor_id) " 
+			+ "SELECT t.project_id, t.version, t.flow_id, '20' as status, 'system redo' as submit_user, "
+			+ "(unix_timestamp(now())*1000) as submit_time, (unix_timestamp(now())*1000) as update_time, (unix_timestamp(now())*1000) as start_time, " 
+			+ "(unix_timestamp(now())*1000) as end_time, t.enc_type, t.flow_data, t.executor_id "
+			+ "FROM execution_flows t WHERE t.exec_id=?";
+	    QueryRunner runner = new QueryRunner();
+	    Connection connection = getConnection();
+	    long id;
+	    try {
+	      runner.update(connection, INSERT_EXECUTABLE_FLOW, executionId);
+	      connection.commit();
+	      id = runner.query(connection, LastInsertID.LAST_INSERT_ID, new LastInsertID());
+	      if (id == -1L) {
+			throw new ExecutorManagerException(">>> redoExecutor Execution id is not properly created.");
+		  }
+	      logger.info(String.format(">>> redoExecutor success, source_execId: %s, targe_execId: %s", id));
+	      return id;
+	    } catch (SQLException e) {
+	    	throw new ExecutorManagerException("Error creating execution.", e);
+	    } 
   }
   
 }
