@@ -36,7 +36,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.kafka.common.metrics.Stat;
 import org.apache.log4j.Logger;
 
 import com.google.inject.Inject;
@@ -300,41 +299,26 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
 		  setDaemon(true);
 	  }
 
-	@SuppressWarnings("static-access")
 	@Override
 	public void run() {
 		logger.info(String.format(">>> azkaban.executor.redo: %s, azkaban.executor.redo.minutes: %s(ms)", taskRedo, REDO_TIME_TO_LIVE));
 		while(taskRedo) {
 			synchronized (this) {
 				ExecutableFlow dsFlow = null;
-				Long newExecId = 0L;
 				try {
 					dsFlow = executorLoader.fetchExecuteFailedFlow(70, curDateLong());
-					if (dsFlow != null && dsFlow.getExecutionId() != 0 && !runningFlows.containsKey(dsFlow.getExecutionId())) {
-						newExecId = executorLoader.redoExecutor(dsFlow.getExecutionId());
-						if (!runningFlows.containsKey(newExecId.intValue())) {
-							executorLoader.addRedoActiveExecutableReference(newExecId.intValue());
-							ExecutableFlow newflow = new ExecutableFlow();
-							newflow.setExecutionId(newExecId.intValue());
-							submitFlow(newExecId.intValue(), newflow);
+					if (dsFlow != null && dsFlow.getExecutionId() != 0) {
+						if (!runningFlows.containsKey(dsFlow.getExecutionId())) {
+							executorLoader.addRedoActiveExecutableReference(dsFlow.getExecutionId());
+							reSubmitFlow(dsFlow);
 						} else {
-							logger.info(String.format(">>> newExecId: %s is running", newExecId.intValue()));
+							logger.info(String.format(">>> ExecutionId: %s is running", dsFlow.getExecutionId()));
 						}
-					} else {
-						logger.info(String.format(">>> ExecutionId: %s is running", dsFlow.getExecutionId()));
 					}
 					wait(REDO_TIME_TO_LIVE);
 				} catch (Exception e) {
 					runningFlows.remove(dsFlow.getExecutionId());
-					runningFlows.remove(newExecId.intValue());
-					try {
-						executorLoader.removeActiveExecutableReference(newExecId.intValue());
-						executorLoader.updateExecFlow(newExecId.intValue(), Status.CANCELLED.getNumVal(), "system redo");
-					} catch (ExecutorManagerException ex) {
-						logger.error(ex);
-					}
 					logger.error(e);
-					logger.info(String.format(">>> newExecId: %s, ExecutionId: %s exception", newExecId.intValue(), dsFlow.getExecutionId()));
 				}
 			}
 		}
@@ -550,21 +534,81 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
   }
   
   /**
-   * 
-   * @param execId
+   * reLoad file and submit
+   * @param flow
    * @throws ExecutorManagerException
    */
-  public void submitFlow(int execId) throws ExecutorManagerException {
-	  submitFlow(execId, new ExecutableFlow());
+  public void reSubmitFlow(ExecutableFlow flow) throws ExecutorManagerException {
+	  logger.info(">>> redo flow start");
+	  if (flow == null) {
+		  throw new ExecutorManagerException(">>> redo flow is null.");
+	  }
+	  if (Status.FAILED.getNumVal() != flow.getStatus().getNumVal()) {
+		  throw new ExecutorManagerException(">>> redo Execution " + flow.getExecutionId() + " is not FAILED status.");
+	  }
+	  if (runningFlows.containsKey(flow.getExecutionId())) {
+	      throw new ExecutorManagerException(">>> redo Execution " + flow.getExecutionId() + " is already running.");
+	  }
+	  int execId = flow.getExecutionId();
+	  flowPreparer.setup(flow);
+	  int numJobThreads = numJobThreadPerFlow;
+	  FlowWatcher watcher = null;
+	    ExecutionOptions options = flow.getExecutionOptions();
+	    if (options.getPipelineExecutionId() != null) {
+	      Integer pipelineExecId = options.getPipelineExecutionId();
+	      FlowRunner runner = runningFlows.get(pipelineExecId);
+
+	      if (runner != null) {
+	        watcher = new LocalFlowWatcher(runner);
+	      } else {
+	        watcher = new RemoteFlowWatcher(pipelineExecId, executorLoader);
+	      }
+	    }
+	  if (options.getFlowParameters().containsKey(FLOW_NUM_JOB_THREADS)) {
+      try {
+        int numJobs =
+            Integer.valueOf(options.getFlowParameters().get(
+                FLOW_NUM_JOB_THREADS));
+        if (numJobs > 0 && (numJobs <= numJobThreads || ProjectWhitelist
+                .isProjectWhitelisted(flow.getProjectId(),
+                    WhitelistType.NumJobPerFlow))) {
+          numJobThreads = numJobs;
+        }
+      } catch (Exception e) {
+        throw new ExecutorManagerException("Failed to set the number of job threads "
+                + options.getFlowParameters().get(FLOW_NUM_JOB_THREADS) + " for flow " + execId, e);
+      }
+    }
+    FlowRunner runner = new FlowRunner(flow, executorLoader, projectLoader, jobtypeManager, azkabanProps);
+    runner.setFlowWatcher(watcher)
+        .setJobLogSettings(jobLogChunkSize, jobLogNumFiles)
+        .setValidateProxyUser(validateProxyUser)
+        .setNumJobThreads(numJobThreads).addListener(this);
+    configureFlowLevelMetrics(runner);
+    if (runningFlows.containsKey(execId)) {
+      throw new ExecutorManagerException("Execution " + execId + " is already running.");
+    }
+    runningFlows.put(execId, runner);
+    try {
+      Future<?> future = executorService.submit(runner);
+      submittedFlows.put(future, runner.getExecutionId());
+      this.lastFlowSubmittedDate = System.currentTimeMillis();
+    } catch (RejectedExecutionException re) {
+      throw new ExecutorManagerException(
+          ">>> Azkaban server can't execute any more flows. "
+              + "The number of running flows has reached the system configured limit."
+              + "Please notify Azkaban administrators");
+    }
+    logger.info(">>> redo flow end");
   }
+  
 
   /**
    * Load file and submit
    * @param execId
    * @throws ExecutorManagerException
-   * @author zxf 重构增加参数，替换flow_data中的参数
    */
-  public void submitFlow(int execId, ExecutableFlow newflow) throws ExecutorManagerException {
+  public void submitFlow(int execId) throws ExecutorManagerException {
     // Load file and submit
     if (runningFlows.containsKey(execId)) {
       throw new ExecutorManagerException("Execution " + execId + " is already running.");
@@ -576,12 +620,6 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
       throw new ExecutorManagerException("Error loading flow with exec "  + execId);
     }
     logger.info(String.format(">>> submitFlow, fetchExecutableFlow(),param execId:%s, flow:%s", execId, flow.toString()));
-    if (newflow != null) {
-		flow.setExecutionId(newflow.getExecutionId());
-		flow.setSubmitTime(System.currentTimeMillis());
-		flow.setExecutionPath("executions/"+newflow.getExecutionId());
-	}
-    logger.info(String.format(">>> submitFlow, new param execId:%s, flow:%s", flow.getExecutionId(), flow.toString()));
     // Sets up the project files and execution directory.
     logger.info(">>> Sets up the project files and execution directory");
     flowPreparer.setup(flow);

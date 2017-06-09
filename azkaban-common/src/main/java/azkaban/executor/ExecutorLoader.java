@@ -224,7 +224,7 @@ public interface ExecutorLoader {
    * @return
    * @throws ExecutorManagerException
    */
-  Long redoExecutor(int executionId) throws ExecutorManagerException;
+//  Long redoExecutor(int executionId) throws ExecutorManagerException;
   
   /**
    * 
