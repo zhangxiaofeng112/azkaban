@@ -1787,7 +1787,7 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
 	      if (id == -1L) {
 			throw new ExecutorManagerException(">>> redoExecutor Execution id is not properly created.");
 		  }
-	      logger.info(String.format(">>> redoExecutor success, source_execId: %s, targe_execId: %s", id));
+	      logger.info(String.format(">>> redoExecutor success, source_execId: %s, targe_execId: %s", executionId, id));
 	      return id;
 	    } catch (SQLException e) {
 	    	throw new ExecutorManagerException("Error creating execution.", e);
