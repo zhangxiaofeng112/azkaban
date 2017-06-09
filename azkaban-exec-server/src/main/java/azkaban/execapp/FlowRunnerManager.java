@@ -312,7 +312,7 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
 					dsFlow = executorLoader.fetchExecuteFailedFlow(70, curDateLong());
 					if (dsFlow != null && dsFlow.getExecutionId() != 0 && !runningFlows.containsKey(dsFlow.getExecutionId())) {
 						newExecId = executorLoader.redoExecutor(dsFlow.getExecutionId());
-						if (!runningFlows.containsKey(newExecId)) {
+						if (!runningFlows.containsKey(newExecId.intValue())) {
 							executorLoader.addRedoActiveExecutableReference(newExecId.intValue());
 							submitFlow(newExecId.intValue());
 						} else {
