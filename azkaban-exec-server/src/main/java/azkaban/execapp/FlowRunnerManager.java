@@ -314,7 +314,9 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
 						newExecId = executorLoader.redoExecutor(dsFlow.getExecutionId());
 						if (!runningFlows.containsKey(newExecId.intValue())) {
 							executorLoader.addRedoActiveExecutableReference(newExecId.intValue());
-							submitFlow(newExecId.intValue());
+							ExecutableFlow newflow = new ExecutableFlow();
+							newflow.setExecutionId(newExecId.intValue());
+							submitFlow(newExecId.intValue(), newflow);
 						} else {
 							logger.info(String.format(">>> newExecId: %s is running", newExecId.intValue()));
 						}
@@ -544,13 +546,23 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
       }
     }
   }
+  
+  /**
+   * 
+   * @param execId
+   * @throws ExecutorManagerException
+   */
+  public void submitFlow(int execId) throws ExecutorManagerException {
+	  submitFlow(execId, new ExecutableFlow());
+  }
 
   /**
    * Load file and submit
    * @param execId
    * @throws ExecutorManagerException
+   * @author zxf 重构增加参数，替换flow_data中的参数
    */
-  public void submitFlow(int execId) throws ExecutorManagerException {
+  public void submitFlow(int execId, ExecutableFlow newflow) throws ExecutorManagerException {
     // Load file and submit
     if (runningFlows.containsKey(execId)) {
       throw new ExecutorManagerException("Execution " + execId + " is already running.");
@@ -562,6 +574,12 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
       throw new ExecutorManagerException("Error loading flow with exec "  + execId);
     }
     logger.info(String.format(">>> submitFlow, fetchExecutableFlow(),param execId:%s, flow:%s", execId, flow.toString()));
+    if (newflow != null) {
+		flow.setExecutionId(newflow.getExecutionId());
+		flow.setSubmitTime(System.currentTimeMillis());
+		flow.setExecutionPath("executions/"+newflow.getExecutionId());
+	}
+    logger.info(String.format(">>> submitFlow, new param execId:%s, flow:%s", flow.getExecutionId(), flow.toString()));
     // Sets up the project files and execution directory.
     logger.info(">>> Sets up the project files and execution directory");
     flowPreparer.setup(flow);
