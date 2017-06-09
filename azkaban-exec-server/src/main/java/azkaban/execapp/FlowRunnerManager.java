@@ -326,6 +326,7 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
 					wait(REDO_TIME_TO_LIVE);
 				} catch (Exception e) {
 					runningFlows.remove(dsFlow.getExecutionId());
+					runningFlows.remove(newExecId.intValue());
 					try {
 						executorLoader.removeActiveExecutableReference(newExecId.intValue());
 						executorLoader.updateExecFlow(newExecId.intValue(), Status.CANCELLED.getNumVal(), "system redo");
@@ -333,6 +334,7 @@ public class FlowRunnerManager implements EventListener, ThreadPoolExecutingList
 						logger.error(ex);
 					}
 					logger.error(e);
+					logger.info(String.format(">>> newExecId: %s, ExecutionId: %s exception", newExecId.intValue(), dsFlow.getExecutionId()));
 				}
 			}
 		}
