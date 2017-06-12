@@ -514,16 +514,17 @@ private void updateFlowReference() throws ExecutorManagerException {
   }
 
   private boolean runReadyJob(ExecutableNode node) throws IOException {
+	logger.info(String.format(">>> runReadyJob, node: %s.", node));
     if (Status.isStatusFinished(node.getStatus())
         || Status.isStatusRunning(node.getStatus())) {
       return false;
     }
 
     Status nextNodeStatus = getImpliedStatus(node);
+    logger.info(String.format(">>> runReadyJob, nextNodeStatus: %s.", nextNodeStatus));
     if (nextNodeStatus == null) {
       return false;
     }
-
     if (nextNodeStatus == Status.CANCELLED) {
       logger.info("Cancelling '" + node.getNestedId()
           + "' due to prior errors.");
@@ -742,6 +743,7 @@ private void updateFlowReference() throws ExecutorManagerException {
   }
 
   private void runExecutableNode(ExecutableNode node) throws IOException {
+	  logger.info(String.format(">>> runExecutableNode, ExecutableNode: %s.", node));
     // Collect output props from the job's dependencies.
     prepareJobProperties(node);
 

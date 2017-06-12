@@ -134,6 +134,7 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
 
   private void updateExecutableFlow(Connection connection, ExecutableFlow flow,
       EncodingType encType) throws ExecutorManagerException {
+	  logger.info(String.format(">>> updateExecutableFlow, flow: %s, encType: %s", flow, encType));
     final String UPDATE_EXECUTABLE_FLOW_DATA =
         "UPDATE execution_flows "
             + "SET status=?,update_time=?,start_time=?,end_time=?,enc_type=?,flow_data=? "
