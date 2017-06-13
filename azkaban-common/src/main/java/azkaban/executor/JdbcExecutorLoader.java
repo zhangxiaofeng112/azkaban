@@ -1648,7 +1648,7 @@ public List<ExecutableFlow> fetchFlowResults(int status, long startTime, long en
   private static class FetchFlowResults implements ResultSetHandler<List<ExecutableFlow>> {
 	private static String FETCH_FLOW_RESULTS =
 	            "SELECT "
-	            + "exec_id, project_id, version, flow_id, status, enc_type, flow_data "
+	            + "exec_id, project_id, version, flow_id, status "
 	            + "FROM execution_flows "
 	            + "WHERE `status`=? AND submit_time>=? AND submit_time<=? "
 	            + "ORDER BY exec_id DESC";
@@ -1665,28 +1665,7 @@ public List<ExecutableFlow> fetchFlowResults(int status, long startTime, long en
 	        int version = rs.getInt(3);
 	        String flowId = rs.getString(4);
 	        int status = rs.getInt(5);
-	        int encodingType = rs.getInt(6);
-	        byte[] data = rs.getBytes(7);
 	        ExecutableFlow flowData = new ExecutableFlow();
-	        if (data != null) {
-	          EncodingType encType = EncodingType.fromInteger(encodingType);
-	          Object flowObj;
-	          try {
-	            // Convoluted way to inflate strings. Should find common package
-	            // or helper function.
-	            if (encType == EncodingType.GZIP) {
-	              // Decompress the sucker.
-	              String jsonString = GZIPUtils.unGzipString(data, "UTF-8");
-	              flowObj = JSONUtils.parseJSONFromString(jsonString);
-	            } else {
-	              String jsonString = new String(data, "UTF-8");
-	              flowObj = JSONUtils.parseJSONFromString(jsonString);
-	            }
-	            ExecutableFlow.createExecutableFlowFromObject(flowData, flowObj);
-	          } catch (IOException e) {
-	            throw new SQLException("Error fetching flow results " + id, e);
-	          }
-	        }
 	        flowData.setExecutionId(id);
             flowData.setProjectId(projectId);
             flowData.setVersion(version);

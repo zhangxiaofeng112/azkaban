@@ -82,12 +82,6 @@ public class ExecutableFlow extends ExecutableFlowBase {
     return exFlow;
   }
   
-  public static void createExecutableFlowFromObject(ExecutableFlow exFlow, final Object obj) {
-    final HashMap<String, Object> flowObj = (HashMap<String, Object>) obj;
-    exFlow.fillExecutableFromMapObject(flowObj);
-  }
-  
-  
 
   @Override
   public String getId() {
