@@ -232,10 +232,13 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
 	    	    Thread.sleep(10000);
 			}
 	      } catch (ExecutorManagerException e) {
+	    	  LOGGER.error(e);
 	    	  ret.put(ConnectorParams.RESPONSE_ERROR, "Failed to retry flows " + e.getMessage());
 	      } catch (ServletException e1) {
+	    	  LOGGER.error(e1);
 	    	  ret.put(ConnectorParams.RESPONSE_ERROR, "Failed to retry flows " + e1.getMessage());
 	      } catch (InterruptedException e2) {
+	    	  LOGGER.error(e2);
 	    	  ret.put(ConnectorParams.RESPONSE_ERROR, "Failed to retry flows " + e2.getMessage());
 	      }
 	    } else {
@@ -988,7 +991,7 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
   private void ajaxExecuteFlow(HttpServletRequest req,
       HttpServletResponse resp, HashMap<String, Object> ret, User user)
       throws ServletException {
-	LOGGER.info(">>> ajaxExecuteFlow");
+	LOGGER.info(">>> ajaxExecuteFlow req:" + req.toString());
     String projectName = getParam(req, "project");
     String flowId = getParam(req, "flow");
 
