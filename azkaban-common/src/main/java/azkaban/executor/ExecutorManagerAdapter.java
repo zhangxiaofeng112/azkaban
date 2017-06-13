@@ -244,4 +244,15 @@ public interface ExecutorManagerAdapter {
    * Disable flow dispatching in QueueProcessor
    */
   public void disableQueueProcessorThread() throws ExecutorManagerException;
+  
+  /**
+   * fetch flow results
+   * @param status
+   * @param startTime
+   * @param endTime
+   * @return
+   * @throws ExecutorManagerException
+   */
+  public List<ExecutableFlow> fetchFlowResults(int status, long startTime, long endTime) 
+		  throws ExecutorManagerException;
 }

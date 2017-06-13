@@ -16,7 +16,6 @@
 
 package azkaban.executor;
 
-import com.google.inject.Inject;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -26,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -33,7 +33,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.time.Duration;
 
 import org.apache.commons.dbutils.DbUtils;
 import org.apache.commons.dbutils.QueryRunner;
@@ -42,6 +41,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
+
+import com.google.inject.Inject;
 
 import azkaban.database.AbstractJdbcLoader;
 import azkaban.executor.ExecutorLogEvent.EventType;
@@ -182,8 +183,26 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
       throw new ExecutorManagerException("Error fetching flow id " + id, e);
     }
   }
+  
+  @Override
+public List<ExecutableFlow> fetchFlowResults(int status, long startTime, long endTime) 
+		throws ExecutorManagerException {
+	  logger.info(String.format(">>> fetchFlowResults params[status=%d, "
+	  		+ "startTime=%d, endTime=%d]", status, startTime, endTime));
+	  QueryRunner runner = createQueryRunner();
+	  FetchExecutableFlows flowHandler = new FetchExecutableFlows();
+	  List<ExecutableFlow> flows = null;
+	  try {
+		flows = runner.query(FetchFlowResults.FETCH_FLOW_RESULTS, flowHandler, 
+				status, startTime, endTime);
+		} catch (SQLException e) {
+			throw new ExecutorManagerException("Error fetching flow results status:" 
+					+ status + ",startTime:" + startTime + ",endTime:" + endTime, e);
+		}
+	return flows;
+}
 
-  /**
+/**
    *
    * {@inheritDoc}
    * @see azkaban.executor.ExecutorLoader#fetchQueuedFlows()
@@ -1585,7 +1604,7 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
         "SELECT exec_id, enc_type, flow_data FROM execution_flows "
             + "WHERE project_id=? AND flow_id=? AND status=? "
             + "ORDER BY exec_id DESC LIMIT ?, ?";
-
+    
     @Override
     public List<ExecutableFlow> handle(ResultSet rs) throws SQLException {
       if (!rs.next()) {
@@ -1625,6 +1644,61 @@ public class JdbcExecutorLoader extends AbstractJdbcLoader implements
       return execFlows;
     }
   }
+  
+  private static class FetchFlowResults implements ResultSetHandler<List<ExecutableFlow>> {
+	private static String FETCH_FLOW_RESULTS =
+	            "SELECT "
+	            + "exec_id, project_id, version, flow_id, status, enc_type, flow_data "
+	            + "FROM execution_flows "
+	            + "WHERE `status`=? AND submit_time>=? AND submit_time<=? "
+	            + "ORDER BY exec_id DESC";
+
+	@Override
+	public List<ExecutableFlow> handle(ResultSet rs) throws SQLException {
+		if (!rs.next()) {
+	        return Collections.<ExecutableFlow> emptyList();
+        }
+		List<ExecutableFlow> execFlows = new ArrayList<ExecutableFlow>();
+		do {
+	        int id = rs.getInt(1);
+	        int projectId = rs.getInt(2);
+	        int version = rs.getInt(3);
+	        String flowId = rs.getString(4);
+	        int status = rs.getInt(5);
+	        int encodingType = rs.getInt(6);
+	        byte[] data = rs.getBytes(7);
+	        ExecutableFlow flowData = new ExecutableFlow();
+	        if (data != null) {
+	          EncodingType encType = EncodingType.fromInteger(encodingType);
+	          Object flowObj;
+	          try {
+	            // Convoluted way to inflate strings. Should find common package
+	            // or helper function.
+	            if (encType == EncodingType.GZIP) {
+	              // Decompress the sucker.
+	              String jsonString = GZIPUtils.unGzipString(data, "UTF-8");
+	              flowObj = JSONUtils.parseJSONFromString(jsonString);
+	            } else {
+	              String jsonString = new String(data, "UTF-8");
+	              flowObj = JSONUtils.parseJSONFromString(jsonString);
+	            }
+	            ExecutableFlow.createExecutableFlowFromObject(flowData, flowObj);
+	          } catch (IOException e) {
+	            throw new SQLException("Error fetching flow results " + id, e);
+	          }
+	        }
+	        flowData.setExecutionId(id);
+            flowData.setProjectId(projectId);
+            flowData.setVersion(version);
+            flowData.setFlowId(flowId);
+            flowData.setStatus(Status.fromInteger(status));
+	        execFlows.add(flowData);
+            logger.info(String.format(">>> FetchFlowResults() flowData: %s", flowData.toString()));
+	      } while (rs.next());
+		return execFlows;
+	}
+  }
+  
 
   private static class IntHandler implements ResultSetHandler<Integer> {
     private static String NUM_EXECUTIONS =

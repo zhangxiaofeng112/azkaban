@@ -109,6 +109,10 @@ public class ExecutableFlowBase extends ExecutableNode {
   public String getFlowId() {
     return this.flowId;
   }
+  
+  public void setFlowId(String flowId) {
+	 this.flowId = flowId;
+  }
 
   protected void setFlow(final Project project, final Flow flow) {
     this.flowId = flow.getId();

@@ -28,6 +28,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang.builder.ToStringStyle;
+
 
 public class ExecutableFlow extends ExecutableFlowBase {
 
@@ -57,7 +60,7 @@ public class ExecutableFlow extends ExecutableFlowBase {
   private String executionPath;
   private ExecutionOptions executionOptions;
   private List<SlaOption> slaOptions = new ArrayList<>();
-
+  
   public ExecutableFlow(final Project project, final Flow flow) {
     this.projectId = project.getId();
     this.projectName = project.getName();
@@ -78,6 +81,13 @@ public class ExecutableFlow extends ExecutableFlowBase {
 
     return exFlow;
   }
+  
+  public static void createExecutableFlowFromObject(ExecutableFlow exFlow, final Object obj) {
+    final HashMap<String, Object> flowObj = (HashMap<String, Object>) obj;
+    exFlow.fillExecutableFromMapObject(flowObj);
+  }
+  
+  
 
   @Override
   public String getId() {
@@ -296,4 +306,9 @@ public class ExecutableFlow extends ExecutableFlowBase {
     this.setStatus(Status.RUNNING);
   }
 
+	@Override
+	public String toString() {
+		return ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE);
+	}
+  
 }

@@ -17,9 +17,9 @@
 package azkaban.executor;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.time.Duration;
 
 import azkaban.executor.ExecutorLogEvent.EventType;
 import azkaban.utils.FileIOUtils.LogData;
@@ -301,4 +301,15 @@ public interface ExecutorLoader {
 
   int removeExecutionLogsByTime(long millis)
       throws ExecutorManagerException;
+  
+  /**
+   * fetch flow results 
+   * @param status
+   * @param startTime
+   * @param endTime
+   * @return
+   * @throws ExecutorManagerException
+   */
+  List<ExecutableFlow> fetchFlowResults(int status, long startTime, long endTime) 
+	  throws ExecutorManagerException;
 }

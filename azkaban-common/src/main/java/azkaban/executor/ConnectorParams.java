@@ -113,5 +113,5 @@ public interface ConnectorParams {
   public static final String STATS_MAP_CLEANINGINTERVAL = "interval";
   public static final String STATS_MAP_EMITTERNUMINSTANCES = "numInstances";
 
-
+  public static final String RESPONSE_MESSAGE = "msg";
 }

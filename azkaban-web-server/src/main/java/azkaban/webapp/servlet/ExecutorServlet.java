@@ -16,6 +16,21 @@
 
 package azkaban.webapp.servlet;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.log4j.Logger;
+
 import azkaban.Constants;
 import azkaban.executor.ConnectorParams;
 import azkaban.executor.ExecutableFlow;
@@ -45,23 +60,9 @@ import azkaban.utils.FlowUtils;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
 import azkaban.webapp.AzkabanWebServer;
+import azkaban.webapp.WebMetrics;
 import azkaban.webapp.plugin.PluginRegistry;
 import azkaban.webapp.plugin.ViewerPlugin;
-import azkaban.webapp.WebMetrics;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.log4j.Logger;
 
 
 public class ExecutorServlet extends LoginAbstractAzkabanServlet {
@@ -89,14 +90,18 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
   protected void handleGet(HttpServletRequest req, HttpServletResponse resp,
       Session session) throws ServletException, IOException {
     if (hasParam(req, "ajax")) {
+    	LOGGER.info(">>> request type=ajax");
       handleAJAXAction(req, resp, session);
     } else if (hasParam(req, "execid")) {
+    	LOGGER.info(String.format(">>> request execid=%s", req.getParameter("execid")));
       if (hasParam(req, "job")) {
+    	  LOGGER.info(String.format(">>> request job=%s", req.getParameter("job")));
         handleExecutionJobDetailsPage(req, resp, session);
       } else {
         handleExecutionFlowPage(req, resp, session);
       }
     } else {
+    	LOGGER.info(">>> request execid is null, redirect to executions page");
       handleExecutionsPage(req, resp, session);
     }
   }
@@ -164,7 +169,15 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
       String flowName = getParam(req, "flow");
       ajaxFetchFlowInfo(req, resp, ret, session.getUser(), projectName,
           flowName);
-    } else {
+    } 
+    //fetch flows exec results
+    else if (ajaxName.equals("retryFailedFlows")) {
+    	String status = getParam(req, "status");
+    	String mins = getParam(req, "mins");
+    	ajaxRetryFailedFlows(req, resp, ret, session.getUser(), Integer.parseInt(status), Integer.parseInt(mins));
+	}
+    //end
+    else {
       String projectName = getParam(req, "project");
 
       ret.put("project", projectName);
@@ -175,6 +188,55 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
     if (ret != null) {
       this.writeJSON(resp, ret);
     }
+  }
+  
+  /**
+   * fetch flows exec results
+   * @param req
+   * @param resp
+   * @param ret
+   * @param user
+   * @param status
+   * @param mins
+   */
+  private void ajaxRetryFailedFlows(HttpServletRequest req, HttpServletResponse resp, 
+		  HashMap<String, Object> ret, User user, int status, int mins) {
+	  LOGGER.info(">>> ajaxRetryFailedFlows");
+	  if (HttpRequestUtils.hasPermission(userManager, user, Type.EXECUTE)) {
+		  long endTime = System.currentTimeMillis();
+		  long startTime = getStartTime(mins);
+		  List<ExecutableFlow> results = null;
+	      try {
+	    	results = executorManager.fetchFlowResults(status, startTime, endTime);
+	    	if (results == null || results.size() == 0) {
+				ret.put(ConnectorParams.RESPONSE_MESSAGE, "result is null");
+				ret.put(ConnectorParams.STATUS_PARAM, ConnectorParams.RESPONSE_SUCCESS);
+				return;
+			}
+	        //start new flow
+	    	for (ExecutableFlow flow : results) {
+	    	    req.setAttribute("project", flow.getProjectId());
+	    	    req.setAttribute("flow", flow.getFlowId());
+	    	    ajaxExecuteFlow(req, resp, ret, user);
+	    	    Thread.sleep(10000);
+			}
+	      } catch (ExecutorManagerException e) {
+	    	  ret.put(ConnectorParams.RESPONSE_ERROR, "Failed to retry flows " + e.getMessage());
+	      } catch (ServletException e1) {
+	    	  ret.put(ConnectorParams.RESPONSE_ERROR, "Failed to retry flows " + e1.getMessage());
+	      } catch (InterruptedException e2) {
+	    	  ret.put(ConnectorParams.RESPONSE_ERROR, "Failed to retry flows " + e2.getMessage());
+	      }
+	    } else {
+	    	ret.put(ConnectorParams.RESPONSE_ERROR, "Only Admins are allowed to retry flows");
+	    }
+  }
+  
+  
+  private long getStartTime(final int mins) {
+	  Calendar cal = Calendar.getInstance();
+	  cal.add(Calendar.MINUTE, -mins);
+	  return cal.getTimeInMillis();
   }
 
   /**
@@ -700,7 +762,8 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
     ret.put("nodeStatus", nodeStatus);
     ret.put("disabled", options.getDisabledJobs());
   }
-
+  
+  
   private void ajaxCancelFlow(HttpServletRequest req, HttpServletResponse resp,
       HashMap<String, Object> ret, User user, ExecutableFlow exFlow)
       throws ServletException {
@@ -914,6 +977,7 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
   private void ajaxExecuteFlow(HttpServletRequest req,
       HttpServletResponse resp, HashMap<String, Object> ret, User user)
       throws ServletException {
+	LOGGER.info(">>> ajaxExecuteFlow");
     String projectName = getParam(req, "project");
     String flowId = getParam(req, "flow");
 
@@ -937,6 +1001,8 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
     exflow.addAllProxyUsers(project.getProxyUsers());
 
     ExecutionOptions options = HttpRequestUtils.parseFlowOptions(req);
+    LOGGER.info(String.format(">>> ajaxExecuteFlow request: %s", req.toString()));
+    LOGGER.info(String.format(">>> ajaxExecuteFlow options: %s", options.toString()));
     exflow.setExecutionOptions(options);
     if (!options.isFailureEmailsOverridden()) {
       options.setFailureEmails(flow.getFailureEmails());

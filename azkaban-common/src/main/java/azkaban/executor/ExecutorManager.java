@@ -16,11 +16,6 @@
 
 package azkaban.executor;
 
-import azkaban.Constants;
-import azkaban.metrics.CommonMetrics;
-import azkaban.utils.FlowUtils;
-import com.google.common.collect.Lists;
-import com.google.inject.Inject;
 import java.io.File;
 import java.io.IOException;
 import java.lang.Thread.State;
@@ -48,6 +43,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 
+import com.google.common.collect.Lists;
+import com.google.inject.Inject;
+
+import azkaban.Constants;
 import azkaban.alert.Alerter;
 import azkaban.event.Event;
 import azkaban.event.Event.Type;
@@ -56,11 +55,13 @@ import azkaban.event.EventHandler;
 import azkaban.executor.selector.ExecutorComparator;
 import azkaban.executor.selector.ExecutorFilter;
 import azkaban.executor.selector.ExecutorSelector;
+import azkaban.metrics.CommonMetrics;
 import azkaban.project.Project;
 import azkaban.project.ProjectWhitelist;
 import azkaban.scheduler.ScheduleStatisticManager;
 import azkaban.utils.FileIOUtils.JobMetaData;
 import azkaban.utils.FileIOUtils.LogData;
+import azkaban.utils.FlowUtils;
 import azkaban.utils.JSONUtils;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
@@ -1437,13 +1438,27 @@ public class ExecutorManager extends EventHandler implements
               alerter.alertOnError(flow);
             } catch (Exception e) {
               // TODO Auto-generated catch block
-              e.printStackTrace();
+//              e.printStackTrace();
               logger.error("Failed to alert by " + alertType);
             }
           } else {
             logger.error("Alerter type " + alertType + " doesn't exist. Failed to alert.");
           }
         }
+        
+        //added by zxf
+        //alerter plugin global conf
+        Alerter smsAlerter = alerterHolder.get("sms");
+        if (smsAlerter != null) {
+        	logger.info("alert.type=sms founded");
+        	try {
+        		smsAlerter.alertOnError(flow);
+              } catch (Exception e) {
+                logger.error("Failed to alert by " + smsAlerter, e);
+              }
+		} else {
+			logger.info("alert.type=sms not found, exit");
+		}
       } else {
         if (options.getSuccessEmails() != null && !options.getSuccessEmails().isEmpty()) {
           try {
@@ -1468,6 +1483,21 @@ public class ExecutorManager extends EventHandler implements
             logger.error("Alerter type " + alertType + " doesn't exist. Failed to alert.");
           }
         }
+        
+      //added by zxf
+        //alerter plugin global conf
+          Alerter smsAlerter = alerterHolder.get("sms");
+          if (smsAlerter != null) {
+          	logger.info("alert.type=sms founded");
+          	try {
+          		smsAlerter.alertOnSuccess(flow);
+                } catch (Exception e) {
+                  logger.error("Failed to alert by " + smsAlerter, e);
+                }
+  		} else {
+  			logger.info("alert.type=sms not found, exit");
+  		}
+        
       }
     }
 
@@ -1570,6 +1600,20 @@ public class ExecutorManager extends EventHandler implements
               + " doesn't exist. Failed to alert.");
         }
       }
+      
+      //added by zxf
+      //alerter plugin global conf
+      Alerter smsAlerter = alerterHolder.get("sms");
+      if (smsAlerter != null) {
+      	logger.info("alert.type=sms founded");
+      	try {
+      		smsAlerter.alertOnFirstError(flow);
+            } catch (Exception e) {
+              logger.error("Failed to alert by " + smsAlerter, e);
+            }
+		} else {
+			logger.info("alert.type=sms not found, exit");
+		}
     }
 
     return flow;
@@ -1639,8 +1683,19 @@ public class ExecutorManager extends EventHandler implements
     return executorLoader.fetchFlowHistory(projectId, flowId, from, length,
         status);
   }
+  	
 
-  /*
+  @Override
+public List<ExecutableFlow> fetchFlowResults(int status, long startTime, long endTime) 
+		throws ExecutorManagerException {
+	  List<ExecutableFlow> flowResults = executorLoader.fetchFlowResults(status, startTime, endTime);
+	  if (flowResults == null || flowResults.size() == 0) {
+		return null;
+	  }
+	return flowResults;
+}
+
+/*
    * cleaner thread to clean up execution_logs, etc in DB. Runs every day.
    */
   private class CleanerThread extends Thread {

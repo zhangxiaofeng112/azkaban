@@ -17,12 +17,6 @@
 
 package azkaban.executor;
 
-import azkaban.alert.Alerter;
-import azkaban.utils.Emailer;
-import azkaban.utils.FileIOUtils;
-import azkaban.utils.Props;
-import azkaban.utils.PropsUtils;
-import com.google.inject.Inject;
 import java.io.File;
 import java.lang.reflect.Constructor;
 import java.net.MalformedURLException;
@@ -33,7 +27,16 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.log4j.Logger;
+
+import com.google.inject.Inject;
+
+import azkaban.alert.Alerter;
+import azkaban.utils.Emailer;
+import azkaban.utils.FileIOUtils;
+import azkaban.utils.Props;
+import azkaban.utils.PropsUtils;
 
 
 public class AlerterHolder {
@@ -59,15 +62,22 @@ public class AlerterHolder {
     // load all plugin alerters
     final String pluginDir = props.getString("alerter.plugin.dir", "plugins/alerter");
     allAlerters.putAll(loadPluginAlerters(pluginDir));
+    //added by zxf
+    logger.info("allAlerters.size >>> " + allAlerters.size());
+    logger.info("allAlerters >>> " + allAlerters.toString());
+    //added end
     return allAlerters;
   }
 
   private Map<String, Alerter> loadPluginAlerters(final String pluginPath) {
     final File alerterPluginPath = new File(pluginPath);
     if (!alerterPluginPath.exists()) {
+    	//added by zxf
+        logger.info("this is no alerter plugin >>> " + pluginPath);
       return Collections.<String, Alerter>emptyMap();
     }
-
+    //added by zxf
+    logger.info("alerter pluginPath >>> " + pluginPath);
     final Map<String, Alerter> installedAlerterPlugins =
         new HashMap<>();
     final ClassLoader parentLoader = getClass().getClassLoader();
