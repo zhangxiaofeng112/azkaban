@@ -225,7 +225,6 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
 	    	    req.setAttribute("project", project.getName());
 	    	    req.setAttribute("projectId", flow.getProjectId());
 	    	    req.setAttribute("flow", flow.getFlowId());
-	    	    req.setAttribute("concurrentOption", "skip");
 	    	    ajaxExecuteFlow(req, resp, ret, user);
 	    	    //update failed flow satatus = FAILED_FINISHING
 	    	    executorManager.updateExecutionFlowStatus(Status.FAILED_FINISHING.getNumVal(), flow.getExecutionId());
@@ -992,8 +991,17 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
       HttpServletResponse resp, HashMap<String, Object> ret, User user)
       throws ServletException {
 	LOGGER.info(">>> ajaxExecuteFlow req:" + req.toString());
-    String projectName = getParam(req, "project");
-    String flowId = getParam(req, "flow");
+    String ajax = req.getParameter("ajax");
+    String projectName = null;
+    String flowId = null;
+    if (StringUtils.isBlank(ajax) || !StringUtils.equalsIgnoreCase("retryFailedFlows", ajax)) {
+    	projectName = getParam(req, "project");
+        flowId = getParam(req, "flow");
+	} else {
+		projectName = (String) req.getAttribute("project");
+		flowId = (String) req.getAttribute("flow");
+		LOGGER.info(">>> request is comming from retryFailedFlows.");
+	}
 
     Project project =
         getProjectAjaxByPermission(ret, projectName, user, Type.EXECUTE);

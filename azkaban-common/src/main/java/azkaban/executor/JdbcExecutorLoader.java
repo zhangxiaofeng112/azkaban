@@ -1695,7 +1695,7 @@ public List<ExecutableFlow> fetchFlowResults(int status, long startTime, long en
             flowData.setStatus(Status.fromInteger(status));
             flowData.setExecutorId(executorId);
 	        execFlows.add(flowData);
-            logger.info(String.format(">>> FetchFlowResults() flowData: %s", flowData.toString()));
+//            logger.info(String.format(">>> FetchFlowResults() flowData: %s", flowData.toString()));
 	      } while (rs.next());
 		return execFlows;
 	}
