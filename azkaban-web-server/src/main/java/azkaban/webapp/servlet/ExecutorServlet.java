@@ -29,6 +29,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import azkaban.Constants;
@@ -202,6 +203,7 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
   private void ajaxRetryFailedFlows(HttpServletRequest req, HttpServletResponse resp, 
 		  HashMap<String, Object> ret, User user, int status, int mins) {
 	  LOGGER.info(">>> ajaxRetryFailedFlows");
+	  LOGGER.info(String.format(">>> ajaxRetryFailedFlows, req: %s", req.toString()));
 	  if (HttpRequestUtils.hasPermission(userManager, user, Type.EXECUTE)) {
 		  long endTime = System.currentTimeMillis();
 		  long startTime = getStartTime(mins);
@@ -215,8 +217,15 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
 			}
 	        //start new flow
 	    	for (ExecutableFlow flow : results) {
-	    	    req.setAttribute("project", flow.getProjectId());
+	    	    Project project = projectManager.getProject(flow.getProjectId());
+	    	    if (project == null || StringUtils.isBlank(project.getName())) {
+					LOGGER.error(String.format(">>> project is null ,continue, projectId: %d , flowId: %s", flow.getProjectId(), flow.getFlowId()));
+					continue;
+				}
+	    	    req.setAttribute("project", project.getName());
+	    	    req.setAttribute("projectId", flow.getProjectId());
 	    	    req.setAttribute("flow", flow.getFlowId());
+	    	    req.setAttribute("concurrentOption", "skip");
 	    	    ajaxExecuteFlow(req, resp, ret, user);
 	    	    Thread.sleep(10000);
 			}
