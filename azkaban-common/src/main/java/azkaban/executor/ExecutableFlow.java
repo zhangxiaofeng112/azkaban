@@ -61,6 +61,8 @@ public class ExecutableFlow extends ExecutableFlowBase {
   private ExecutionOptions executionOptions;
   private List<SlaOption> slaOptions = new ArrayList<>();
   
+  private int executorId = -1;
+  
   public ExecutableFlow(final Project project, final Flow flow) {
     this.projectId = project.getId();
     this.projectName = project.getName();
@@ -82,8 +84,22 @@ public class ExecutableFlow extends ExecutableFlowBase {
     return exFlow;
   }
   
+  public static void createExecutableFlowFromObject(ExecutableFlow exFlow, final Object obj) {
+	    final HashMap<String, Object> flowObj = (HashMap<String, Object>) obj;
+	    exFlow.fillExecutableFromMapObject(flowObj);
+  }
+  
+  
 
-  @Override
+  public int getExecutorId() {
+	return executorId;
+}
+
+	public void setExecutorId(int executorId) {
+		this.executorId = executorId;
+	}
+
+@Override
   public String getId() {
     return getFlowId();
   }

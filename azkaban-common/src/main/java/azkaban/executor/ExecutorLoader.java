@@ -312,4 +312,13 @@ public interface ExecutorLoader {
    */
   List<ExecutableFlow> fetchFlowResults(int status, long startTime, long endTime) 
 	  throws ExecutorManagerException;
+  
+  /**
+   * update execution_flows
+   * @param status
+   * @param execId
+   * @throws ExecutorManagerException
+   */
+  int updateExecutionFlowStatus(int status, int execId) 
+		  throws ExecutorManagerException;
 }

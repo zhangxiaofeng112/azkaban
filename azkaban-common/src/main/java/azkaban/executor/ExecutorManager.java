@@ -1683,7 +1683,7 @@ public class ExecutorManager extends EventHandler implements
     return executorLoader.fetchFlowHistory(projectId, flowId, from, length,
         status);
   }
-  	
+
 
   @Override
 public List<ExecutableFlow> fetchFlowResults(int status, long startTime, long endTime) 
@@ -1693,6 +1693,13 @@ public List<ExecutableFlow> fetchFlowResults(int status, long startTime, long en
 		return null;
 	  }
 	return flowResults;
+}
+  
+  
+
+@Override
+public int updateExecutionFlowStatus(int status, int execId) throws ExecutorManagerException {
+	return executorLoader.updateExecutionFlowStatus(status, execId);
 }
 
 /*

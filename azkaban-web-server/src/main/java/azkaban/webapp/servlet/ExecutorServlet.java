@@ -227,6 +227,8 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
 	    	    req.setAttribute("flow", flow.getFlowId());
 	    	    req.setAttribute("concurrentOption", "skip");
 	    	    ajaxExecuteFlow(req, resp, ret, user);
+	    	    //update failed flow satatus = FAILED_FINISHING
+	    	    executorManager.updateExecutionFlowStatus(Status.FAILED_FINISHING.getNumVal(), flow.getExecutionId());
 	    	    Thread.sleep(10000);
 			}
 	      } catch (ExecutorManagerException e) {

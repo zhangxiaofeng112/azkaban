@@ -190,7 +190,7 @@ public List<ExecutableFlow> fetchFlowResults(int status, long startTime, long en
 	  logger.info(String.format(">>> fetchFlowResults params[status=%d, "
 	  		+ "startTime=%d, endTime=%d]", status, startTime, endTime));
 	  QueryRunner runner = createQueryRunner();
-	  FetchExecutableFlows flowHandler = new FetchExecutableFlows();
+	  FetchFlowResults flowHandler = new FetchFlowResults();
 	  List<ExecutableFlow> flows = null;
 	  try {
 		flows = runner.query(FetchFlowResults.FETCH_FLOW_RESULTS, flowHandler, 
@@ -1648,7 +1648,7 @@ public List<ExecutableFlow> fetchFlowResults(int status, long startTime, long en
   private static class FetchFlowResults implements ResultSetHandler<List<ExecutableFlow>> {
 	private static String FETCH_FLOW_RESULTS =
 	            "SELECT "
-	            + "exec_id, project_id, version, flow_id, status "
+	            + "exec_id, project_id, version, flow_id, status, enc_type, flow_data, executor_id "
 	            + "FROM execution_flows "
 	            + "WHERE `status`=? AND submit_time>=? AND submit_time<=? "
 	            + "ORDER BY exec_id DESC";
@@ -1665,21 +1665,59 @@ public List<ExecutableFlow> fetchFlowResults(int status, long startTime, long en
 	        int version = rs.getInt(3);
 	        String flowId = rs.getString(4);
 	        int status = rs.getInt(5);
+	        int encodingType = rs.getInt(6);
+	        byte[] data = rs.getBytes(7);
+	        int executorId = rs.getInt(8);
 	        ExecutableFlow flowData = new ExecutableFlow();
+	        if (data != null) {
+	          EncodingType encType = EncodingType.fromInteger(encodingType);
+	          Object flowObj;
+	          try {
+	            // Convoluted way to inflate strings. Should find common package
+	            // or helper function.
+	            if (encType == EncodingType.GZIP) {
+	              // Decompress the sucker.
+	              String jsonString = GZIPUtils.unGzipString(data, "UTF-8");
+	              flowObj = JSONUtils.parseJSONFromString(jsonString);
+	            } else {
+	              String jsonString = new String(data, "UTF-8");
+	              flowObj = JSONUtils.parseJSONFromString(jsonString);
+	            }
+	            ExecutableFlow.createExecutableFlowFromObject(flowData, flowObj);
+	          } catch (IOException e) {
+	            throw new SQLException("Error fetching flow results " + id, e);
+	          }
+	        }
 	        flowData.setExecutionId(id);
             flowData.setProjectId(projectId);
             flowData.setVersion(version);
             flowData.setFlowId(flowId);
             flowData.setStatus(Status.fromInteger(status));
+            flowData.setExecutorId(executorId);
 	        execFlows.add(flowData);
             logger.info(String.format(">>> FetchFlowResults() flowData: %s", flowData.toString()));
 	      } while (rs.next());
 		return execFlows;
 	}
   }
-  
 
-  private static class IntHandler implements ResultSetHandler<Integer> {
+  @Override
+public int updateExecutionFlowStatus(int status, int execId) throws ExecutorManagerException {
+	  logger.info(String.format(">>> updateExecutionFlowStatus params[status=%d, execId=%d]", status, execId));
+	  final String UPDATE_EXECUTION_FLOWS_STATUS = 
+	    		"UPDATE execution_flows SET STATUS=? WHERE exec_id=?";
+	  QueryRunner runner = createQueryRunner();
+	    int updateNum = 0;
+	    try {
+	      updateNum = runner.update(UPDATE_EXECUTION_FLOWS_STATUS, status, execId);
+	    } catch (SQLException e) {
+	      throw new ExecutorManagerException(
+	          "Error update execution_flows status: " + status + ",execId:" + execId, e);
+	    }
+	    return updateNum;
+}
+
+private static class IntHandler implements ResultSetHandler<Integer> {
     private static String NUM_EXECUTIONS =
         "SELECT COUNT(1) FROM execution_flows";
     private static String NUM_FLOW_EXECUTIONS =
@@ -1688,7 +1726,7 @@ public List<ExecutableFlow> fetchFlowResults(int status, long startTime, long en
         "SELECT COUNT(1) FROM execution_jobs WHERE project_id=? AND job_id=?";
     private static String FETCH_EXECUTOR_ID =
         "SELECT executor_id FROM execution_flows WHERE exec_id=?";
-
+    
     @Override
     public Integer handle(ResultSet rs) throws SQLException {
       if (!rs.next()) {
